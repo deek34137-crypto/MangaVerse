@@ -1,0 +1,119 @@
+src/app/(main)/history/page.tsx(70,40): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<"all" | "month" | "week" | "today">'.
+src/app/(main)/history/page.tsx(99,65): error TS18046: 'entries' is of type 'unknown'.
+src/app/(main)/history/page.tsx(99,89): error TS18046: 'entries' is of type 'unknown'.
+src/app/(main)/history/page.tsx(105,20): error TS18046: 'entries' is of type 'unknown'.
+src/app/(main)/history/page.tsx(105,33): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/app/(main)/history/page.tsx(105,40): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/(main)/library/page.tsx(37,9): error TS2488: Type 'boolean' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/app/(main)/library/page.tsx(37,35): error TS2365: Operator '<' cannot be applied to types '{ <S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>]; <S = undefined>(): [S | undefined, Dispatch<SetStateAction<S | undefined>>]; }' and 'string'.
+src/app/(main)/manga/[id]/page.tsx(39,5): error TS2322: Type '{ title: any; description: any; type: "books.book"; images: { url: any; }[]; siteName: string; }' is not assignable to type 'OpenGraph | null | undefined'.
+  Types of property 'type' are incompatible.
+    Type '"books.book"' is not assignable to type '"article" | "website" | "book" | "profile" | "music.song" | "music.album" | "music.playlist" | "music.radio_station" | "video.movie" | "video.episode" | "video.tv_show" | "video.other" | undefined'.
+src/app/(main)/recommendations/page.tsx(90,45): error TS2322: Type '{ id: string; title: string; altTitles: string[]; description: string; coverImage: string; status: string; type: string; genres: { id: string; name: string; slug: string; mangaCount: number; }[]; tags: never[]; ... 10 more ...; userData: { ...; }; }' is not assignable to type 'Manga'.
+  Types of property 'status' are incompatible.
+    Type 'string' is not assignable to type 'MangaStatus'.
+src/app/(main)/recommendations/page.tsx(103,45): error TS2322: Type '{ id: string; title: string; altTitles: string[]; description: string; coverImage: string; status: string; type: string; genres: { id: string; name: string; slug: string; mangaCount: number; }[]; tags: never[]; ... 10 more ...; userData: { ...; }; }' is not assignable to type 'Manga'.
+  Types of property 'status' are incompatible.
+    Type 'string' is not assignable to type 'MangaStatus'.
+src/app/(main)/recommendations/page.tsx(116,45): error TS2322: Type '{ id: string; title: string; altTitles: string[]; description: string; coverImage: string; status: string; type: string; genres: { id: string; name: string; slug: string; mangaCount: number; }[]; tags: never[]; ... 10 more ...; userData: { ...; }; }' is not assignable to type 'Manga'.
+  Types of property 'status' are incompatible.
+    Type 'string' is not assignable to type 'MangaStatus'.
+src/app/(main)/recommendations/page.tsx(129,45): error TS2322: Type '{ id: string; title: string; altTitles: string[]; description: string; coverImage: string; status: string; type: string; genres: { id: string; name: string; slug: string; mangaCount: number; }[]; tags: never[]; ... 10 more ...; userData: { ...; }; }' is not assignable to type 'Manga'.
+  Types of property 'status' are incompatible.
+    Type 'string' is not assignable to type 'MangaStatus'.
+src/app/(main)/search/page.tsx(78,9): error TS18048: 'filters.genres' is possibly 'undefined'.
+src/app/(main)/search/page.tsx(79,9): error TS18048: 'filters.tags' is possibly 'undefined'.
+src/app/(main)/search/page.tsx(80,9): error TS18048: 'filters.status' is possibly 'undefined'.
+src/app/(main)/search/page.tsx(81,9): error TS18048: 'filters.type' is possibly 'undefined'.
+src/app/(main)/search/page.tsx(82,9): error TS18048: 'filters.demographic' is possibly 'undefined'.
+src/app/(main)/search/page.tsx(83,9): error TS18048: 'filters.rating' is possibly 'undefined'.
+src/app/(main)/search/page.tsx(176,21): error TS2322: Type 'string[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/app/(main)/search/page.tsx(183,21): error TS2322: Type 'MangaType[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/app/(main)/search/page.tsx(191,21): error TS2322: Type 'MangaStatus[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/app/(main)/search/page.tsx(199,21): error TS2322: Type 'Demographic[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/app/(main)/search/page.tsx(207,30): error TS18048: 'filters.rating' is possibly 'undefined'.
+src/app/(main)/search/page.tsx(260,19): error TS2322: Type '{ children: Element[]; value: SortOption | undefined; onValueChange: (v: string) => void; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+src/app/(main)/search/page.tsx(287,21): error TS2322: Type 'string[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/app/(main)/search/page.tsx(293,21): error TS2322: Type 'MangaType[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/app/(main)/search/page.tsx(300,21): error TS2322: Type 'MangaStatus[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/app/(main)/search/page.tsx(350,29): error TS18048: 'filters.page' is possibly 'undefined'.
+src/app/(main)/search/page.tsx(362,29): error TS18048: 'filters.page' is possibly 'undefined'.
+src/app/(main)/settings/page.tsx(79,33): error TS2339: Property 'displayName' does not exist on type 'User'.
+src/app/(main)/settings/page.tsx(80,30): error TS2339: Property 'username' does not exist on type 'User'.
+src/app/(main)/settings/page.tsx(83,28): error TS2339: Property 'avatar' does not exist on type 'User'.
+src/app/(main)/settings/page.tsx(288,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(299,47): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(312,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(321,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(387,41): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(413,41): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(439,41): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(468,54): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(478,50): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(500,41): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(534,54): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(573,43): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(598,46): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(626,46): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(653,54): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(663,54): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(716,56): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(737,56): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(783,50): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(784,15): error TS2322: Type '{ children: Element[]; value: any; onValueChange: (value: string) => any; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+src/app/(main)/settings/page.tsx(798,50): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(799,15): error TS2322: Type '{ children: Element[]; value: any; onValueChange: (value: string) => any; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+src/app/(main)/settings/page.tsx(813,50): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(814,15): error TS2322: Type '{ children: Element[]; value: any; onValueChange: (value: string) => any; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+src/app/(main)/settings/page.tsx(828,50): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(829,15): error TS2322: Type '{ children: Element[]; value: any; onValueChange: (value: string) => any; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SelectSharedProps & { value?: string | undefined; defaultValue?: string | undefined; onValueChange?(value: string): void; }'.
+src/app/(main)/settings/page.tsx(855,54): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(865,54): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(906,44): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(916,44): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/(main)/settings/page.tsx(927,44): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/api/search/route.ts(160,22): error TS18048: 'genres' is possibly 'undefined'.
+src/app/api/search/route.ts(160,29): error TS2339: Property 'id' does not exist on type 'string[]'.
+src/app/api/search/route.ts(160,39): error TS18048: 'genres' is possibly 'undefined'.
+src/app/api/search/route.ts(160,46): error TS2339: Property 'name' does not exist on type 'string[]'.
+src/app/api/search/route.ts(160,58): error TS18048: 'genres' is possibly 'undefined'.
+src/app/api/search/route.ts(160,65): error TS2339: Property 'slug' does not exist on type 'string[]'.
+src/app/api/search/route.ts(160,83): error TS18048: 'genres' is possibly 'undefined'.
+src/app/api/search/route.ts(160,90): error TS2339: Property 'mangaCount' does not exist on type 'string[]'.
+src/app/api/search/route.ts(163,18): error TS2345: Argument of type 'string[] | undefined' is not assignable to parameter of type 'SQL<unknown> | PgTable<TableConfig> | Subquery<string, Record<string, unknown>> | PgViewBase<string, boolean, ColumnsSelection>'.
+  Type 'undefined' is not assignable to type 'SQL<unknown> | PgTable<TableConfig> | Subquery<string, Record<string, unknown>> | PgViewBase<string, boolean, ColumnsSelection>'.
+src/app/api/search/route.ts(163,50): error TS18048: 'genres' is possibly 'undefined'.
+src/app/api/search/route.ts(163,57): error TS2339: Property 'id' does not exist on type 'string[]'.
+src/auth.ts(34,27): error TS2339: Property 'role' does not exist on type 'User | AdapterUser'.
+  Property 'role' does not exist on type 'User'.
+src/auth.ts(35,34): error TS2339: Property 'preferences' does not exist on type 'User | AdapterUser'.
+  Property 'preferences' does not exist on type 'User'.
+src/auth.ts(45,22): error TS2339: Property 'role' does not exist on type 'AdapterUser & User'.
+src/auth.ts(46,22): error TS2339: Property 'preferences' does not exist on type 'AdapterUser & User'.
+src/auth.ts(94,32): error TS2339: Property 'preferences' does not exist on type '{ id: string; email: string; username: string; displayName: string; passwordHash: string | null; avatar: string | null; banner: string | null; bio: string | null; role: string; emailVerified: boolean; ... 5 more ...; updatedAt: Date; }'.
+src/components/layout/footer.tsx(47,13): error TS2304: Cannot find name 'Discord'.
+src/components/manga/manga-detail.tsx(165,51): error TS2339: Property 'ratingCount' does not exist on type 'Manga'.
+src/components/manga/manga-detail.tsx(219,29): error TS2322: Type 'string' is not assignable to type '"link" | "default" | "destructive" | "outline" | "secondary" | "ghost" | "premium" | null | undefined'.
+src/components/reader/reader.tsx(163,7): error TS2322: Type '(e: KeyboardEvent) => void' is not assignable to type 'KeyboardEventHandler<HTMLDivElement>'.
+  Types of parameters 'e' and 'event' are incompatible.
+    Type 'KeyboardEvent<HTMLDivElement>' is missing the following properties from type 'KeyboardEvent': isComposing, initKeyboardEvent, DOM_KEY_LOCATION_STANDARD, DOM_KEY_LOCATION_LEFT, and 14 more.
+src/components/reader/reader.tsx(615,39): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/components/reader/reader.tsx(616,87): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/components/reader/reader.tsx(654,41): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/components/reader/reader.tsx(655,89): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/lib/utils.ts(239,9): error TS18046: 'aVal' is of type 'unknown'.
+src/lib/utils.ts(239,16): error TS18046: 'bVal' is of type 'unknown'.
+src/lib/utils.ts(240,9): error TS18046: 'aVal' is of type 'unknown'.
+src/lib/utils.ts(240,16): error TS18046: 'bVal' is of type 'unknown'.
