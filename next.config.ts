@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   images: {
@@ -20,16 +19,6 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   serverExternalPackages: ["@auth/core"],
-  webpack: (config, { isServer }) => {
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      preact: path.resolve("./node_modules/preact"),
-      "preact/jsx-runtime": path.resolve("./node_modules/preact/jsx-runtime"),
-      "preact-render-to-string": path.resolve("./node_modules/preact-render-to-string"),
-    };
-    return config;
-  },
 };
 
 export default nextConfig;
