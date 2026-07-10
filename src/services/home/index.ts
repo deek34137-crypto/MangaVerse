@@ -1,5 +1,6 @@
 import { getLatestManga, getPopularManga, searchManga, type MangaDexEntity, type MangaDexMangaAttributes } from "@/services/mangadex";
 import { mapManga } from "@/services/mangadex/mapping";
+import { cacheGet, cacheSet, buildFeaturedKey, buildTrendingKey, buildPopularKey, buildLatestKey, getTTL } from "@/services/cache";
 import type { Manga } from "@/types";
 
 export interface HomeSection {
@@ -7,8 +8,24 @@ export interface HomeSection {
   total: number;
 }
 
+async function fetchAndCache<T>(
+  key: string,
+  fetchFn: () => Promise<T>,
+  ttlSeconds: number
+): Promise<T> {
+  const cached = await cacheGet<T>(key);
+  if (cached) {
+    return cached;
+  }
+
+  const fresh = await fetchFn();
+  await cacheSet(key, fresh, ttlSeconds);
+  return fresh;
+}
+
 export async function getFeatured(limit = 6): Promise<HomeSection> {
-  try {
+  const key = buildFeaturedKey(limit);
+  return fetchAndCache(key, async () => {
     const res = await searchManga({
       order: { rating: "desc" },
       limit,
@@ -20,14 +37,13 @@ export async function getFeatured(limit = 6): Promise<HomeSection> {
       res.data.map((entity: MangaDexEntity<MangaDexMangaAttributes>) => mapManga(entity))
     );
 
-    return { manga: mapped, total: res.total || mapped.length };
-  } catch {
-    return { manga: [], total: 0 };
-  }
+    return { manga: mapped, total: res.total ?? mapped.length };
+  }, getTTL("featured"));
 }
 
 export async function getTrending(limit = 10): Promise<HomeSection> {
-  try {
+  const key = buildTrendingKey(limit);
+  return fetchAndCache(key, async () => {
     const res = await searchManga({
       order: { updatedAt: "desc" },
       limit,
@@ -39,45 +55,43 @@ export async function getTrending(limit = 10): Promise<HomeSection> {
       res.data.map((entity: MangaDexEntity<MangaDexMangaAttributes>) => mapManga(entity))
     );
 
-    return { manga: mapped, total: res.total || mapped.length };
-  } catch {
-    return { manga: [], total: 0 };
-  }
+    return { manga: mapped, total: res.total ?? mapped.length };
+  }, getTTL("trending"));
 }
 
 export async function getPopular(limit = 10): Promise<HomeSection> {
-  try {
+  const key = buildPopularKey(limit);
+  return fetchAndCache(key, async () => {
     const res = await getPopularManga(limit, 0);
 
     const mapped = await Promise.all(
       res.data.map((entity: MangaDexEntity<MangaDexMangaAttributes>) => mapManga(entity))
     );
 
-    return { manga: mapped, total: res.total || mapped.length };
-  } catch {
-    return { manga: [], total: 0 };
-  }
+    return { manga: mapped, total: res.total ?? mapped.length };
+  }, getTTL("popular"));
 }
 
 export async function getLatest(limit = 10): Promise<HomeSection> {
-  try {
+  const key = buildLatestKey(limit);
+  return fetchAndCache(key, async () => {
     const res = await getLatestManga(limit, 0);
 
     const mapped = await Promise.all(
       res.data.map((entity: MangaDexEntity<MangaDexMangaAttributes>) => mapManga(entity))
     );
 
-    return { manga: mapped, total: res.total || mapped.length };
-  } catch {
-    return { manga: [], total: 0 };
-  }
+    return { manga: mapped, total: res.total ?? mapped.length };
+  }, getTTL("latest"));
 }
 
 export async function getContinueReading(userId: string, limit = 6): Promise<HomeSection> {
+  // Continue reading is user-specific, no cache for now
+  // (could be added with user-specific cache keys)
   try {
-    const { eq, desc, inArray, sql } = await import("drizzle-orm");
     const { db } = await import("@/db");
-    const { history, manga: mangaTable, mangaGenres, genres, mangaTags, tags, authors, mangaAuthors, artists, mangaArtists } = await import("@/db/schema");
+    const { history, manga: mangaTable } = await import("@/db/schema");
+    const { eq, desc, inArray } = await import("drizzle-orm");
 
     const recentHistory = await db
       .select({
@@ -95,7 +109,7 @@ export async function getContinueReading(userId: string, limit = 6): Promise<Hom
       return { manga: [], total: 0 };
     }
 
-    const mangaIds = recentHistory.map(h => h.mangaId).filter(Boolean);
+    const mangaIds = recentHistory.map((h) => h.mangaId).filter(Boolean);
 
     if (mangaIds.length === 0) {
       return { manga: [], total: 0 };
@@ -107,7 +121,7 @@ export async function getContinueReading(userId: string, limit = 6): Promise<Hom
       .where(inArray(mangaTable.id, mangaIds));
 
     if (localManga.length > 0) {
-      const enriched = localManga.map(m => ({
+      const enriched = localManga.map((m) => ({
         ...m,
         genres: [],
         tags: [],
@@ -124,7 +138,7 @@ export async function getContinueReading(userId: string, limit = 6): Promise<Hom
         endDate: m.endDate || undefined,
       }));
 
-      const ordered = mangaIds.map(id => enriched.find(m => m.id === id)).filter(Boolean) as any[];
+      const ordered = mangaIds.map((id) => enriched.find((m) => m.id === id)).filter(Boolean) as any[];
       return { manga: ordered, total: ordered.length };
     }
 
@@ -135,6 +149,7 @@ export async function getContinueReading(userId: string, limit = 6): Promise<Hom
 }
 
 export async function getRecommendations(userId: string, limit = 6): Promise<HomeSection> {
+  // Recommendations are user-specific, no cache for now
   try {
     const { db } = await import("@/db");
     const { history, library, userStats, manga: mangaTable, mangaGenres, genres } = await import("@/db/schema");
@@ -156,18 +171,13 @@ export async function getRecommendations(userId: string, limit = 6): Promise<Hom
       .where(eq(userStats.userId, userId))
       .limit(1);
 
-    const libraryIds = userLibrary.map(l => l.mangaId);
-    const historyIds = userHistory.map(h => h.mangaId);
+    const libraryIds = userLibrary.map((l) => l.mangaId);
+    const historyIds = userHistory.map((h) => h.mangaId);
     const allUserIds = [...new Set([...libraryIds, ...historyIds])];
     const favoriteGenres = (stats[0]?.favoriteGenres as string[]) || [];
 
     if (allUserIds.length === 0 && favoriteGenres.length === 0) {
       return getPopular(limit);
-    }
-
-    let genreConditions = [];
-    if (favoriteGenres.length > 0) {
-      genreConditions = favoriteGenres;
     }
 
     const recommendations = await searchManga({
@@ -178,8 +188,8 @@ export async function getRecommendations(userId: string, limit = 6): Promise<Hom
     });
 
     const filtered = recommendations.data
-      .map(entity => mapManga(entity))
-      .filter(m => !allUserIds.includes(m.id));
+      .map((entity) => mapManga(entity))
+      .filter((m) => !allUserIds.includes(m.id));
 
     return { manga: filtered.slice(0, limit), total: filtered.length };
   } catch {
