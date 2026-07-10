@@ -1,168 +1,170 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { MangaCard } from "@/components/manga/manga-card";
-import { SectionTitle } from "@/components/ui/section-title";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Zap, Shield, BookOpen, Search, Heart, Clock } from "lucide-react";
-import Link from "next/link";
+import { HeroCarousel } from "@/components/home/HeroCarousel";
+import { MangaCarousel } from "@/components/home/MangaCarousel";
+import { ContinueReadingSection } from "@/components/home/ContinueReadingSection";
+import { GenresSection } from "@/components/home/GenresSection";
+import { getHomeData } from "@/services/home";
+import { auth } from "@/auth";
 
 export const metadata: Metadata = {
-  title: "Premium Manga Reading Platform",
-  description: "Read manga online with a premium, cinematic experience. Advanced search, immersive reader, library management, and personalized recommendations.",
+  title: "MangaHub - Discover Your Next Favorite Manga",
+  description: "Read manga online with a premium, cinematic experience. Discover trending, popular, and latest manga. Continue reading where you left off.",
+  openGraph: {
+    title: "MangaHub - Discover Your Next Favorite Manga",
+    description: "Read manga online with a premium, cinematic experience. Discover trending, popular, and latest manga.",
+    type: "website",
+    siteName: "MangaHub",
+  },
 };
 
-const features = [
-  {
-    icon: Sparkles,
-    title: "Cinematic Reading",
-    description: "Immersive vertical and horizontal reading modes with smooth page transitions",
-  },
-  {
-    icon: Zap,
-    title: "Lightning Fast",
-    description: "Edge-optimized image delivery and instant page loads worldwide",
-  },
-  {
-    icon: Shield,
-    title: "Privacy First",
-    description: "Your reading data stays private. No tracking, no ads, ever",
-  },
-  {
-    icon: BookOpen,
-    title: "Massive Library",
-    description: "Access millions of chapters across manga, manhwa, manhua, and webtoons",
-  },
-  {
-    icon: Search,
-    title: "Advanced Search",
-    description: "Filter by genre, demographic, status, rating, and more with instant results",
-  },
-  {
-    icon: Heart,
-    title: "Smart Library",
-    description: "Track progress, get notifications, and receive personalized recommendations",
-  },
-];
+function FeaturedSkeleton() {
+  return (
+    <section className="relative h-[60vh] min-h-[400px] animate-pulse">
+      <div className="absolute inset-0 bg-gradient-to-r from-muted/50 to-transparent" />
+      <div className="relative z-10 h-full flex items-center justify-center">
+        <div className="w-full max-w-4xl mx-auto px-4">
+          <div className="h-8 w-48 bg-muted rounded animate-pulse mb-4" />
+          <div className="h-12 w-96 bg-muted rounded animate-pulse mb-4" />
+          <div className="h-8 w-72 bg-muted rounded animate-pulse mb-6" />
+          <div className="flex gap-4">
+            <div className="h-12 w-48 bg-muted rounded animate-pulse" />
+            <div className="h-12 w-48 bg-muted rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-const stats = [
-  { value: "500K+", label: "Manga Titles" },
-  { value: "50M+", label: "Chapters" },
-  { value: "2M+", label: "Active Readers" },
-  { value: "99.9%", label: "Uptime" },
-];
+function SectionSkeleton({ title }: { title: string }) {
+  return (
+    <section className="space-y-4 animate-pulse" aria-labelledby={`${title.toLowerCase().replace(/\s+/g, "-")}-heading`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 bg-muted rounded animate-pulse" />
+          <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+        </div>
+      </div>
+      <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="flex-shrink-0 w-40">
+            <div className="aspect-[2/3] rounded-lg bg-muted animate-pulse" />
+            <div className="mt-2 space-y-1">
+              <div className="h-4 w-full bg-muted rounded animate-pulse" />
+              <div className="h-3 w-3/4 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-export default function HomePage() {
+function ContinueReadingSkeleton() {
+  return (
+    <section className="space-y-4 animate-pulse" aria-labelledby="continue-reading-heading">
+      <h2 id="continue-reading-heading" className="text-heading-lg font-display font-bold text-foreground flex items-center gap-2">
+        <div className="h-5 w-5 bg-muted rounded animate-pulse" />
+        <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+      </h2>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="group">
+            <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted animate-pulse" />
+            <div className="mt-3 space-y-2">
+              <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+              <div className="h-2 bg-muted rounded animate-pulse" />
+              <div className="h-2 bg-muted rounded animate-pulse w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GenresSkeleton() {
+  return (
+    <section className="space-y-4 animate-pulse" aria-labelledby="genres-heading">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 bg-muted rounded animate-pulse" />
+          <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+        </div>
+      </div>
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        {[...Array(12)].map((_, i) => (
+          <div key={i} className="group">
+            <div className="rounded-xl overflow-hidden bg-gradient-to-br from-muted/50 to-transparent border border-border p-5 flex flex-col items-center text-center animate-pulse">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-3" />
+              <div className="h-4 w-24 bg-muted rounded animate-pulse mb-2" />
+              <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default async function HomePage() {
+  const session = await auth();
+  const userId = session?.user?.id;
+
+  const homeData = await getHomeData(userId);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
       <main className="flex-1">
-        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-16">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
-          <div className="container-padded relative z-10 py-20">
-            <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 animate-fade-in">
-                <Sparkles className="h-4 w-4" />
-                <span>New: AI-Powered Recommendations & Vertical Reading Mode</span>
-              </div>
-              <h1 className="text-display-xl font-display font-bold text-foreground mb-6 animate-slide-up">
-                Your Manga,
-                <br />
-                <span className="gradient-text">Elevated</span>
-              </h1>
-              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up" style={{ animationDelay: "100ms" }}>
-                Experience manga like never before. Cinematic UI, lightning-fast performance,
-                and features designed for serious readers.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style={{ animationDelay: "200ms" }}>
-                <Link href="/search">
-                  <Button size="xl" className="group w-full sm:w-auto">
-                    Start Reading
-                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                </Link>
-                <Link href="/library">
-                  <Button size="xl" variant="outline" className="w-full sm:w-auto">
-                    Explore Library
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
+        <Suspense fallback={<FeaturedSkeleton />}>
+          <HeroCarousel featured={homeData.featured.manga} />
+        </Suspense>
 
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce-slow">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background/50 backdrop-blur border border-border">
-              <ArrowRight className="h-5 w-5 rotate-90 text-muted-foreground" />
+        {homeData.continueReading.manga.length > 0 && (
+          <Suspense fallback={<ContinueReadingSkeleton />}>
+            <div className="container-padded py-8">
+              <ContinueReadingSection items={homeData.continueReading.manga as any} />
             </div>
-          </div>
-        </section>
+          </Suspense>
+        )}
 
-        <section className="section bg-gradient-to-b from-card/50 to-transparent">
-          <div className="container-padded">
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-              {stats.map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="text-display-md font-display font-bold text-foreground gradient-text mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-body-md text-muted-foreground">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="container-padded">
-            <SectionTitle
-              title="Why Choose MangaHub?"
-              subtitle="Built by readers, for readers. Every feature designed to enhance your manga experience."
+        <div className="container-padded py-8 space-y-12">
+          <Suspense fallback={<SectionSkeleton title="Trending" />}>
+            <MangaCarousel
+              title="Trending"
+              icon={<svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>}
+              manga={homeData.trending.manga}
+              href="/search?sort=trending"
             />
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-12">
-              {features.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="group card p-6 hover:shadow-lg hover:border-primary/20 transition-all duration-300"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <feature.icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="text-heading-sm font-semibold text-foreground mb-2">{feature.title}</h3>
-                  <p className="text-body-sm text-muted-foreground">{feature.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+          </Suspense>
 
-        <section className="section bg-muted/30">
-          <div className="container-padded">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-display-sm font-display font-bold text-foreground mb-6">
-                Ready to Start Reading?
-              </h2>
-              <p className="text-body-lg text-muted-foreground mb-8">
-                Join millions of readers enjoying the best manga experience.
-                Free to start, no credit card required.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/register">
-                  <Button size="xl" className="w-full sm:w-auto group">
-                    Create Free Account
-                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                </Link>
-                <Link href="/search">
-                  <Button size="xl" variant="outline" className="w-full sm:w-auto">
-                    Browse Without Account
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
+          <Suspense fallback={<SectionSkeleton title="Latest Updates" />}>
+            <MangaCarousel
+              title="Latest Updates"
+              icon={<svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
+              manga={homeData.latest.manga}
+              href="/search?sort=updated"
+            />
+          </Suspense>
+
+          <Suspense fallback={<SectionSkeleton title="Popular" />}>
+            <MangaCarousel
+              title="Popular"
+              icon={<svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.411 3.174 8.116 7.362 9.852.156.08.318.126.483.126h4.302c.165 0 .327-.046.483-.126C18.826 20.116 22 16.411 22 12c0-5.523-4.477-10-10-10zM12 4c4.418 0 8 3.582 8 8s-3.582 8-8 8-8-3.582-8-8 3.582-8 8-8zm0 2c-3.314 0-6 2.686-6 6s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6z" /></svg>}
+              manga={homeData.popular.manga}
+              href="/search?sort=popularity"
+            />
+          </Suspense>
+
+          <Suspense fallback={<GenresSkeleton />}>
+            <GenresSection genres={[]} />
+          </Suspense>
+        </div>
       </main>
 
       <Footer />
