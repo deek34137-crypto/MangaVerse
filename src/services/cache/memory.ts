@@ -45,7 +45,7 @@ export class InMemoryCache implements CacheBackend {
     this.store.delete(key);
   }
 
-  getMetrics(): CacheMetrics {
+  async getMetrics(): Promise<CacheMetrics | null> {
     return { ...this.metrics };
   }
 

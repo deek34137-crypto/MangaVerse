@@ -1,0 +1,205 @@
+<section
+	class="flex-1 flex flex-col pb-4 cursor-pointer"
+	:class="{ 'gap-4': gap }"
+	x-data="{ 
+		scrollDown() { window.scrollBy({ top: window.innerHeight * 0.75, behavior: 'smooth' }); },
+		scrollUp() { window.scrollBy({ top: -window.innerHeight * 0.75, behavior: 'smooth' }); },
+		handleClick(e) {
+			const clickX = e.clientX;
+			const sectionWidth = e.currentTarget.getBoundingClientRect().width;
+			const isLeftHalf = clickX < sectionWidth / 2;
+
+			if (isLeftHalf) {
+				this.scrollUp();
+			} else {
+				this.scrollDown();
+			}
+		},
+	}"
+	hx-get="https://weebcentral.com/chapters/01KX67YEF91V53NDQRCR5NEZSJ/images"
+	hx-trigger="change from:[name='reading_style']"
+	hx-include="[name='reading_style']"
+	hx-swap="outerHTML"
+	@click="handleClick">
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-001.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 1"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-002.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 2"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-003.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 3"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-004.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 4"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-005.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 5"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-006.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 6"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-007.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 7"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-008.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 8"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-009.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 9"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-010.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 10"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-011.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 11"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-012.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 12"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-013.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 13"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-014.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 14"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-015.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 15"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-016.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 16"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-017.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 17"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+	<img
+		src="https://scans-hot.planeptune.us/manga/One-Piece/1188-018.png"
+		class="maw-w-full mx-auto"
+		width="784"
+		height="1145"
+		alt="Page 18"
+		decoding="async"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/static/images/broken_image.jpg'" />
+	
+</section>

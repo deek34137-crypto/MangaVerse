@@ -1,156 +1,330 @@
-"use client";
-
-import { motion } from "framer-motion";
-import { useState, useRef } from "react";
-import Link from "next/link";
-import { ChevronLeft, ChevronRight, TrendingUp, Flame, Clock, Trophy } from "lucide-react";
-import { Manga } from "@/types";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MangaCard, MangaCardSkeleton } from "@/components/manga/manga-card";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { stagger, transition } from "@/animations/motion";
+import type { Manga } from "@/types";
 
-interface MangaCarouselProps {
-  title: string;
-  icon?: React.ReactNode;
-  manga: Manga[];
-  href?: string;
-  emptyMessage?: string;
+/* ─── Arrow button ───────────────────────────────────────────────────────── */
+function ArrowButton({
+  direction,
+  onClick,
+  disabled,
+  style = "glass",
+}: {
+  direction: "left" | "right";
+  onClick: () => void;
+  disabled: boolean;
+  style?: "glass" | "solid" | "minimal";
+}) {
+  const styleMap = {
+    glass:
+      "bg-ink-950/60 hover:bg-ink-800/80 text-foreground border border-ink-700/60 hover:border-primary/50 hover:text-primary shadow-sm backdrop-blur-md cursor-pointer",
+    solid:
+      "bg-primary text-primary-foreground hover:bg-primary/95 shadow-md cursor-pointer",
+    minimal:
+      "bg-background/80 border border-ink-800 text-ink-300 hover:text-foreground hover:border-ink-600 cursor-pointer",
+  };
+
+  return (
+    <motion.button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={direction === "left" ? "Scroll left" : "Scroll right"}
+      whileHover={disabled ? undefined : { scale: 1.05 }}
+      whileTap={disabled ? undefined : { scale: 0.95 }}
+      className={cn(
+        "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0",
+        "transition-all duration-180",
+        "disabled:opacity-20 disabled:pointer-events-none",
+        styleMap[style]
+      )}
+    >
+      {direction === "left" ? (
+        <ChevronLeft className="h-4 w-4" />
+      ) : (
+        <ChevronRight className="h-4 w-4" />
+      )}
+    </motion.button>
+  );
 }
 
+/* ─── Scroll indicator dots ──────────────────────────────────────────────── */
+function ScrollIndicators({
+  total,
+  active,
+  onSelect,
+}: {
+  total: number;
+  active: number;
+  onSelect: (i: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5" role="tablist" aria-label="Carousel position">
+      {Array.from({ length: total }, (_, i) => (
+        <button
+          key={i}
+          role="tab"
+          aria-selected={i === active}
+          aria-label={`Go to page ${i + 1}`}
+          onClick={() => onSelect(i)}
+          className={cn(
+            "h-1 rounded-full transition-all duration-300 cursor-pointer",
+            i === active ? "w-6 bg-primary" : "w-1.5 bg-ink-700 hover:bg-primary/40"
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─── Props ──────────────────────────────────────────────────────────────── */
+interface MangaCarouselProps {
+  title: string;
+  items: Manga[];
+  /** Optional subtitle or badge */
+  subtitle?: string;
+  badge?: string;
+  /** Link target for "View All" */
+  viewAllHref?: string;
+  viewAllLabel?: string;
+  /** Max items to display */
+  itemLimit?: number;
+  /** Loading state — renders skeleton strip */
+  isLoading?: boolean;
+  skeletonCount?: number;
+  /** Show left/right fade edge masks */
+  showFade?: boolean;
+  /** Show scroll position indicator dots */
+  showIndicators?: boolean;
+  /** Arrow button visual style */
+  arrowStyle?: "glass" | "solid" | "minimal";
+  /** Card size variant */
+  cardSize?: "sm" | "md" | "lg";
+  /** Enable scroll snap */
+  snap?: boolean;
+  className?: string;
+  /** aria-labelledby id for the section heading */
+  headingId?: string;
+}
+
+/* ─── Card width by size ─────────────────────────────────────────────────── */
+const cardWidths = {
+  sm:  "w-28 sm:w-32",
+  md:  "w-36 sm:w-40 md:w-44",
+  lg:  "w-44 sm:w-52 md:w-56",
+};
+
+const SCROLL_AMOUNT = 320; // px per arrow click
+
+/**
+ * MangaCarousel — reusable horizontal-scroll manga strip.
+ *
+ * Used on: homepage sections, manga detail related/recommendations,
+ * continue reading, recently viewed, trending.
+ */
 export function MangaCarousel({
   title,
-  icon,
-  manga,
-  href,
-  emptyMessage = "No manga available",
+  items,
+  subtitle,
+  badge,
+  viewAllHref,
+  viewAllLabel,
+  itemLimit = 20,
+  isLoading = false,
+  skeletonCount = 8,
+  showFade = true,
+  showIndicators = false,
+  arrowStyle = "glass",
+  cardSize = "md",
+  snap = true,
+  className,
+  headingId,
 }: MangaCarouselProps) {
-  if (!manga.length) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [indicatorPage, setIndicatorPage] = useState(0);
+
+  const displayItems = items.slice(0, itemLimit);
+  const sectionId = headingId ?? `carousel-${title.toLowerCase().replace(/\s+/g, "-")}`;
+
+  /* ── Update arrow/indicator state on scroll ── */
+  const updateScrollState = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 4);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+    // Rough page index for indicators
+    const pageWidth = clientWidth;
+    setIndicatorPage(Math.round(scrollLeft / pageWidth));
+  }, []);
+
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      ro.disconnect();
+    };
+  }, [updateScrollState, displayItems]);
+
+  /* ── Scroll helpers ── */
+  const scrollBy = useCallback((delta: number) => {
+    trackRef.current?.scrollBy({ left: delta, behavior: "smooth" });
+  }, []);
+
+  const scrollToPage = useCallback((page: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollTo({ left: page * el.clientWidth, behavior: "smooth" });
+  }, []);
+
+  /* ── Loading skeleton ── */
+  if (isLoading) {
     return (
-      <section className="space-y-4" aria-labelledby={`${title.toLowerCase().replace(/\s+/g, "-")}-heading`}>
+      <section className={cn("space-y-4", className)} aria-labelledby={sectionId}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {icon && <span className="h-5 w-5 text-primary" aria-hidden="true">{icon}</span>}
-            <h2 id={`${title.toLowerCase().replace(/\s+/g, "-")}-heading`} className="text-heading-lg font-display font-bold text-foreground">
-              {title}
-            </h2>
+          <div className="space-y-1">
+            <div className="h-6 w-44 loading-shimmer rounded-md" />
+            <div className="h-4 w-28 loading-shimmer rounded-md" />
           </div>
+          <div className="h-5 w-14 loading-shimmer rounded-md" />
         </div>
-        <div className="text-center py-12 bg-muted/50 rounded-xl">
-          <p className="text-muted-foreground">{emptyMessage}</p>
+        <div className="flex gap-4 overflow-hidden">
+          {Array.from({ length: skeletonCount }, (_, i) => (
+            <MangaCardSkeleton key={i} variant={cardSize === "lg" ? "featured" : cardSize === "sm" ? "compact" : "default"} />
+          ))}
         </div>
       </section>
     );
   }
 
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  if (!displayItems.length) return null;
 
-  const scrollLeft = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: -300, behavior: "smooth" });
-    }
-  };
 
-  const scrollRight = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: 300, behavior: "smooth" });
-    }
-  };
 
   return (
-    <section className="space-y-4" aria-labelledby={`${title.toLowerCase().replace(/\s+/g, "-")}-heading`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {icon && <span className="h-5 w-5 text-primary" aria-hidden="true">{icon}</span>}
-          <h2 id={`${title.toLowerCase().replace(/\s+/g, "-")}-heading`} className="text-heading-lg font-display font-bold text-foreground">
-            {title}
-          </h2>
+    <section
+      className={cn("space-y-4", className)}
+      aria-labelledby={sectionId}
+    >
+      {/* ── Section header ── */}
+      <div className="flex items-center justify-between gap-4">
+        <SectionHeader
+          id={sectionId}
+          title={title}
+          subtitle={subtitle}
+          badge={badge}
+          viewAllHref={viewAllHref}
+          viewAllLabel={viewAllLabel}
+          animate={false}
+          className="flex-1"
+        />
+
+        {/* Arrow buttons — always visible on desktop */}
+        <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0 mt-2">
+          <ArrowButton
+            direction="left"
+            onClick={() => scrollBy(-SCROLL_AMOUNT)}
+            disabled={!canScrollLeft}
+            style={arrowStyle}
+          />
+          <ArrowButton
+            direction="right"
+            onClick={() => scrollBy(SCROLL_AMOUNT)}
+            disabled={!canScrollRight}
+            style={arrowStyle}
+          />
         </div>
-        {href && (
-          <Link
-            href={href}
-            className="text-sm text-primary hover:underline flex items-center gap-1"
-          >
-            View All
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        )}
       </div>
 
-      <div className="relative group">
+      {/* ── Scroll track wrapper ── */}
+      <div className="relative">
+        {/* Left fade mask */}
+        {showFade && canScrollLeft && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-16 z-10 pointer-events-none bg-gradient-to-r from-background to-transparent"
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Right fade mask */}
+        {showFade && canScrollRight && (
+          <div
+            className="absolute right-0 top-0 bottom-0 w-16 z-10 pointer-events-none bg-gradient-to-l from-background to-transparent"
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Horizontal scroll track */}
         <div
-          ref={scrollContainerRef}
-          className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 -mx-4 px-4"
-          onScroll={(e) => setScrollPosition((e.currentTarget as HTMLDivElement).scrollLeft)}
+          ref={trackRef}
+          className={cn(
+            "flex gap-4 overflow-x-auto pb-3 -mb-3",
+            "scrollbar-hide",
+            snap && "scroll-snap-x-mandatory",
+          )}
+          style={{ scrollSnapType: snap ? "x mandatory" : undefined }}
           role="list"
           aria-label={`${title} manga`}
         >
-          {manga.map((item, index) => (
+          {displayItems.map((manga, i) => (
             <motion.div
-              key={item.id}
-              layout
+              key={manga.id}
               role="listitem"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05, duration: 0.3 }}
-              className="flex-shrink-0"
+              className={cn("flex-shrink-0", cardWidths[cardSize])}
+              style={{ scrollSnapAlign: snap ? "start" : undefined }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...transition.fade, delay: stagger(i, 0.03, 0.2) }}
             >
-              <Link
-                href={`/manga/${item.id}`}
-                className="group flex flex-col w-40 transition-transform duration-300"
-                aria-label={`View ${item.title}`}
-              >
-                <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted">
-                  {item.coverImage ? (
-                    <motion.img
-                      src={item.coverImage}
-                      alt={item.title}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      loading="lazy"
-                      sizes="(max-width: 640px) 160px, 140px"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-muted">
-                      <span className="text-4xl" aria-hidden="true">📖</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <div className="mt-2 space-y-1">
-                  <h3 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                    {item.title}
-                  </h3>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {item.rating && item.rating > 0 && (
-                      <span className="flex items-center gap-1 text-yellow-500">
-                        <span>★</span> {item.rating.toFixed(1)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Link>
+              <MangaCard
+                manga={manga}
+                variant={cardSize === "lg" ? "featured" : cardSize === "sm" ? "compact" : "default"}
+                priority={i < 4}
+              />
             </motion.div>
           ))}
         </div>
-
-        <motion.button
-          onClick={scrollLeft}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm border border-border flex items-center justify-center text-foreground hover:bg-background hover:border-primary transition-all z-10 opacity-0 group-hover:opacity-100"
-          aria-label="Scroll left"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-        </motion.button>
-
-        <motion.button
-          onClick={scrollRight}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm border border-border flex items-center justify-center text-foreground hover:bg-background hover:border-primary transition-all z-10 opacity-0 group-hover:opacity-100"
-          aria-label="Scroll right"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <ChevronRight className="h-5 w-5" aria-hidden="true" />
-        </motion.button>
       </div>
+
+      {/* ── Scroll indicators + mobile arrows ── */}
+      {(showIndicators || true) && (
+        <div className="flex items-center justify-between mt-1">
+          {/* Mobile prev/next */}
+          <div className="flex sm:hidden items-center gap-1.5">
+            <ArrowButton
+              direction="left"
+              onClick={() => scrollBy(-SCROLL_AMOUNT)}
+              disabled={!canScrollLeft}
+              style={arrowStyle}
+            />
+            <ArrowButton
+              direction="right"
+              onClick={() => scrollBy(SCROLL_AMOUNT)}
+              disabled={!canScrollRight}
+              style={arrowStyle}
+            />
+          </div>
+
+          {/* Indicator dots */}
+          {showIndicators && (
+            <ScrollIndicators
+              total={Math.max(1, Math.ceil(displayItems.length / 4))}
+              active={indicatorPage}
+              onSelect={scrollToPage}
+            />
+          )}
+        </div>
+      )}
     </section>
   );
 }

@@ -1,0 +1,31 @@
+{
+  "manifestSchemaVersion": "1.0",
+  "id": "comick",
+  "displayName": "ComicK",
+  "providerVersion": "1.0.0",
+  "priority": 2,
+  "baseUrl": "https://api.comick.io",
+  "network": {
+    "timeoutMs": 8000,
+    "retries": 3,
+    "rateLimit": {
+      "maxRequests": 5,
+      "intervalMs": 2000
+    }
+  },
+  "cache": {
+    "ttlSearchMs": 600000,
+    "ttlMangaMs": 86400000,
+    "ttlChaptersMs": 1800000,
+    "ttlPagesMs": 86400000
+  },
+  "capabilities": {
+    "search": false,
+    "latest": false,
+    "trending": false,
+    "merge": false,
+    "reader": false
+  },
+  "enabled": false,
+  "reason": "Cloudflare Managed Challenge blocks all programmatic HTTP access to api.comick.io. Requires JS execution (Turnstile) to resolve. Disabled 2026-07-18."
+}

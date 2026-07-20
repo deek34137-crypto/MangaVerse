@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useSession } from "next-auth/react";
+import { ClientOnly } from "@/components/ui/ClientOnly";
 
 const tabs = [
   { id: "profile", label: "Profile", icon: User, description: "Manage your profile and avatar" },
@@ -159,7 +160,27 @@ export default function SettingsPage() {
 
         <div className="flex flex-col lg:flex-row gap-8">
           <aside className="lg:w-48 flex-shrink-0">
-            <nav className="space-y-1" role="navigation" aria-label="Settings sections">
+            {/* Mobile horizontal scroll menu */}
+            <div className="flex lg:hidden gap-1.5 overflow-x-auto scrollbar-hide pb-3 border-b border-border/40 mb-2 -mx-4 px-4">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "relative flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all",
+                    activeTab === tab.id
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/10"
+                      : "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  <tab.icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+ 
+            {/* Desktop sidebar */}
+            <nav className="hidden lg:flex flex-col gap-1" role="navigation" aria-label="Settings sections">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -167,14 +188,19 @@ export default function SettingsPage() {
                   aria-selected={activeTab === tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all",
-                    activeTab === tab.id
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    "relative w-full flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-semibold transition-all z-10 text-left",
+                    activeTab === tab.id ? "text-foreground" : "text-ink-400 hover:text-foreground hover:bg-ink-800"
                   )}
                 >
-                  <tab.icon className="h-5 w-5 flex-shrink-0" />
-                  <span>{tab.label}</span>
+                  <tab.icon className="h-5 w-5 flex-shrink-0 relative z-10" />
+                  <span className="relative z-10">{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <motion.div
+                      layoutId="active-settings-bg"
+                      className="absolute inset-0 bg-primary/10 border border-primary/20 rounded-sm -z-10"
+                      transition={{ type: "tween", ease: "easeOut", duration: 0.15 }}
+                    />
+                  )}
                 </button>
               ))}
             </nav>
@@ -210,15 +236,24 @@ export default function SettingsPage() {
                 )}
 
                 {activeTab === "appearance" && (
-                  <AppearanceSettings
-                    prefs={appearancePrefs}
-                    setPrefs={setAppearancePrefs}
-                    theme={theme ?? "dark"}
-                    setTheme={setTheme}
-                    handleSave={() => handleSave("appearance")}
-                    isSaving={isSaving}
-                    saveStatus={saveStatus}
-                  />
+                  <ClientOnly fallback={
+                    <div className="h-60 flex items-center justify-center text-muted-foreground bg-muted/20 border border-border rounded-xl">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <span className="text-xs">Loading appearance settings...</span>
+                      </div>
+                    </div>
+                  }>
+                    <AppearanceSettings
+                      prefs={appearancePrefs}
+                      setPrefs={setAppearancePrefs}
+                      theme={theme ?? "dark"}
+                      setTheme={setTheme}
+                      handleSave={() => handleSave("appearance")}
+                      isSaving={isSaving}
+                      saveStatus={saveStatus}
+                    />
+                  </ClientOnly>
                 )}
 
                 {activeTab === "notifications" && (

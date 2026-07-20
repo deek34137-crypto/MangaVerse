@@ -1,232 +1,168 @@
-import { getLatestManga, getPopularManga, searchManga, type MangaDexEntity, type MangaDexMangaAttributes } from "@/services/mangadex";
-import { mapManga } from "@/services/mangadex/mapping";
-import { cacheGet, cacheSet, buildFeaturedKey, buildTrendingKey, buildPopularKey, buildLatestKey, getTTL } from "@/services/cache";
-import type { Manga } from "@/types";
+import { editorialService } from "@/services/editorial";
+import { trendingService } from "@/services/trending";
+import { genreService } from "@/services/genres";
+import { statsService } from "@/services/stats";
+import { announcementService } from "@/services/announcements";
+import { RequestProfiler } from "@/utils/profiler";
+import { cacheGet, cacheSet } from "@/services/cache";
+import { HomepageContentEngine } from "@/utils/homepage-content-engine";
+import { HomepageEngineConfig } from "@/config/homepage-engine-config";
+import type { HomepageCandidate, HomepageEngineResult } from "@/types/homepage-engine";
+import type { HomePageData, HomeSection, ContinueReadingItem, SiteStats } from "./types";
 
-export interface HomeSection {
-  manga: Manga[];
-  total: number;
-}
+export type { ContinueReadingItem } from "./types";
 
-async function fetchAndCache<T>(
-  key: string,
-  fetchFn: () => Promise<T>,
-  ttlSeconds: number
-): Promise<T> {
-  const cached = await cacheGet<T>(key);
-  if (cached) {
-    return cached;
+// Cache infrastructure version — independent of layoutVersion.
+// Bump this (not layoutVersion) when the cached payload schema changes in a breaking way.
+const CACHE_VERSION = "v2";
+
+export class HomeService {
+  async getHomeData(userId?: string): Promise<HomePageData> {
+    const profiler = new RequestProfiler("Homepage");
+
+    const today = new Date();
+    const seed = [
+      today.getUTCFullYear(),
+      String(today.getUTCMonth() + 1).padStart(2, "0"),
+      String(today.getUTCDate()).padStart(2, "0"),
+    ].join("-");
+
+    const cacheKey = `homepage:${CACHE_VERSION}:${seed}`;
+
+    // ------------------------------------------------------------------
+    // Cache hit path
+    // ------------------------------------------------------------------
+    type CachedPayload = {
+      sections: HomeSection[];
+      stats: SiteStats;
+      generatedAt: string;
+      engineResult: Pick<HomepageEngineResult, "stats" | "timings" | "rejections">;
+    };
+
+    let cached = await cacheGet<CachedPayload>(cacheKey);
+
+    if (!cached) {
+      console.log(`[HomeService] Cache miss: ${cacheKey}`);
+
+      // Pool size = required * config factor (5)
+      const poolSize = 40;
+
+      const [
+        trendingPool,
+        latestPool,
+        popularPool,
+        genres,
+        announcements,
+        siteStats,
+      ] = await Promise.all([
+        profiler.profile("Fetch Trending Pool", () => trendingService.getTrending(poolSize, true)),
+        profiler.profile("Fetch Latest Pool", () => trendingService.getLatestUpdates(poolSize, true)),
+        profiler.profile("Fetch Popular Pool", () => trendingService.getPopular(poolSize, true)),
+        profiler.profile("Fetch Genres", () => genreService.getAll(16)),
+        profiler.profile("Fetch Announcements", () => announcementService.getActive()),
+        profiler.profile("Fetch Site Stats", () => statsService.getSiteStats()),
+      ]);
+
+      const engineResult = HomepageContentEngine.buildLayout(
+        {
+          trending: trendingPool as HomepageCandidate[],
+          latest: latestPool as HomepageCandidate[],
+          popular: popularPool as HomepageCandidate[],
+        },
+        {
+          seed,
+          options: {},
+          services: {
+            logger: (msg) => console.log(msg),
+          },
+        }
+      );
+
+      // Merge engine sections with non-engine sections (genres, announcements)
+      const publicSections: HomeSection[] = [
+        ...engineResult.layout.sections,
+        { type: "genres", priority: 60, data: genres },
+        { type: "announcements", priority: 70, data: announcements },
+      ] as HomeSection[];
+
+      cached = {
+        sections: publicSections,
+        stats: siteStats,
+        generatedAt: new Date().toISOString(),
+        engineResult: {
+          stats: engineResult.stats,
+          timings: engineResult.timings,
+          rejections: engineResult.rejections,
+        },
+      };
+
+      await cacheSet(cacheKey, cached, 86400);
+      console.log(
+        `[HomeService] Cached homepage under ${cacheKey} ` +
+        `(${engineResult.stats.selected} cards, ${engineResult.timings.totalMs}ms)`
+      );
+    } else {
+      console.log(`[HomeService] Cache hit: ${cacheKey}`);
+    }
+
+    // ------------------------------------------------------------------
+    // Inject user-specific sections (not cached)
+    // ------------------------------------------------------------------
+    let activeSections = [...cached.sections];
+
+    if (userId) {
+      const [continueReading, recentlyViewed] = await Promise.all([
+        profiler.profile("Fetch Continue Reading", () => trendingService.getContinueReading(userId)),
+        profiler.profile("Fetch Recently Viewed", () => trendingService.getRecentlyViewed(userId)),
+      ]);
+
+      if (continueReading?.length) {
+        activeSections.push({ type: "continue-reading", priority: 20, data: continueReading });
+      }
+      if (recentlyViewed?.length) {
+        activeSections.push({ type: "recently-viewed", priority: 25, data: recentlyViewed });
+      }
+    }
+
+    const filteredSections = activeSections.filter(
+      (s): s is HomeSection => (Array.isArray(s.data) ? s.data.length > 0 : s.data !== null)
+    );
+
+    profiler.logResult();
+
+    return {
+      sections: filteredSections.sort((a, b) => a.priority - b.priority),
+      stats: cached.stats,
+      generatedAt: cached.generatedAt,
+    };
   }
 
-  const fresh = await fetchFn();
-  await cacheSet(key, fresh, ttlSeconds);
-  return fresh;
-}
-
-export async function getFeatured(limit = 6): Promise<HomeSection> {
-  const key = buildFeaturedKey(limit);
-  return fetchAndCache(key, async () => {
-    const res = await searchManga({
-      order: { rating: "desc" },
-      limit,
-      contentRating: ["safe", "suggestive"],
-      includes: ["cover_art", "author", "artist"],
-    });
-
-    const mapped = await Promise.all(
-      res.data.map((entity: MangaDexEntity<MangaDexMangaAttributes>) => mapManga(entity))
-    );
-
-    return { manga: mapped, total: res.total ?? mapped.length };
-  }, getTTL("featured"));
-}
-
-export async function getTrending(limit = 10): Promise<HomeSection> {
-  const key = buildTrendingKey(limit);
-  return fetchAndCache(key, async () => {
-    const res = await searchManga({
-      order: { updatedAt: "desc" },
-      limit,
-      contentRating: ["safe", "suggestive"],
-      includes: ["cover_art", "author", "artist"],
-    });
-
-    const mapped = await Promise.all(
-      res.data.map((entity: MangaDexEntity<MangaDexMangaAttributes>) => mapManga(entity))
-    );
-
-    return { manga: mapped, total: res.total ?? mapped.length };
-  }, getTTL("trending"));
-}
-
-export async function getPopular(limit = 10): Promise<HomeSection> {
-  const key = buildPopularKey(limit);
-  return fetchAndCache(key, async () => {
-    const res = await getPopularManga(limit, 0);
-
-    const mapped = await Promise.all(
-      res.data.map((entity: MangaDexEntity<MangaDexMangaAttributes>) => mapManga(entity))
-    );
-
-    return { manga: mapped, total: res.total ?? mapped.length };
-  }, getTTL("popular"));
-}
-
-export async function getLatest(limit = 10): Promise<HomeSection> {
-  const key = buildLatestKey(limit);
-  return fetchAndCache(key, async () => {
-    const res = await getLatestManga(limit, 0);
-
-    const mapped = await Promise.all(
-      res.data.map((entity: MangaDexEntity<MangaDexMangaAttributes>) => mapManga(entity))
-    );
-
-    return { manga: mapped, total: res.total ?? mapped.length };
-  }, getTTL("latest"));
-}
-
-export async function getContinueReading(userId: string, limit = 6): Promise<HomeSection> {
-  // Continue reading is user-specific, no cache for now
-  // (could be added with user-specific cache keys)
-  try {
-    const { db } = await import("@/db");
-    const { history, manga: mangaTable } = await import("@/db/schema");
-    const { eq, desc, inArray } = await import("drizzle-orm");
-
-    const recentHistory = await db
-      .select({
-        mangaId: history.mangaId,
-        chapterId: history.chapterId,
-        progress: history.progress,
-        readAt: history.readAt,
-      })
-      .from(history)
-      .where(eq(history.userId, userId))
-      .orderBy(desc(history.readAt))
-      .limit(limit);
-
-    if (recentHistory.length === 0) {
-      return { manga: [], total: 0 };
-    }
-
-    const mangaIds = recentHistory.map((h) => h.mangaId).filter(Boolean);
-
-    if (mangaIds.length === 0) {
-      return { manga: [], total: 0 };
-    }
-
-    const localManga = await db
-      .select()
-      .from(mangaTable)
-      .where(inArray(mangaTable.id, mangaIds));
-
-    if (localManga.length > 0) {
-      const enriched = localManga.map((m) => ({
-        ...m,
-        genres: [],
-        tags: [],
-        authors: [],
-        artists: [],
-        latestChapter: undefined,
-        rating: m.rating || 0,
-        ratingCount: 0,
-        followCount: m.followCount || 0,
-        viewCount: m.viewCount || 0,
-        chapterCount: m.chapterCount || 0,
-        volumeCount: m.volumeCount || 0,
-        startDate: m.startDate || undefined,
-        endDate: m.endDate || undefined,
-      }));
-
-      const ordered = mangaIds.map((id) => enriched.find((m) => m.id === id)).filter(Boolean) as any[];
-      return { manga: ordered, total: ordered.length };
-    }
-
-    return { manga: [], total: 0 };
-  } catch {
-    return { manga: [], total: 0 };
+  // Static helpers for cron/cache warming
+  static async getFeatured(limit: number): Promise<{ manga: any[]; total: number }> {
+    const data = await editorialService.getHeroManga();
+    return { manga: data ? [data] : [], total: data ? 1 : 0 };
   }
-}
 
-export async function getRecommendations(userId: string, limit = 6): Promise<HomeSection> {
-  // Recommendations are user-specific, no cache for now
-  try {
-    const { db } = await import("@/db");
-    const { history, library, userStats, manga: mangaTable, mangaGenres, genres } = await import("@/db/schema");
-    const { eq, desc, inArray, sql } = await import("drizzle-orm");
+  static async getTrending(limit: number): Promise<{ manga: any[]; total: number }> {
+    const manga = await trendingService.getTrending(limit);
+    return { manga, total: manga.length };
+  }
 
-    const userLibrary = await db
-      .select({ mangaId: library.mangaId })
-      .from(library)
-      .where(eq(library.userId, userId));
+  static async getPopular(limit: number): Promise<{ manga: any[]; total: number }> {
+    const manga = await trendingService.getPopular(limit);
+    return { manga, total: manga.length };
+  }
 
-    const userHistory = await db
-      .select({ mangaId: history.mangaId })
-      .from(history)
-      .where(eq(history.userId, userId));
-
-    const stats = await db
-      .select({ favoriteGenres: userStats.favoriteGenres })
-      .from(userStats)
-      .where(eq(userStats.userId, userId))
-      .limit(1);
-
-    const libraryIds = userLibrary.map((l) => l.mangaId);
-    const historyIds = userHistory.map((h) => h.mangaId);
-    const allUserIds = [...new Set([...libraryIds, ...historyIds])];
-    const favoriteGenres = (stats[0]?.favoriteGenres as string[]) || [];
-
-    if (allUserIds.length === 0 && favoriteGenres.length === 0) {
-      return getPopular(limit);
-    }
-
-    const recommendations = await searchManga({
-      order: { rating: "desc" },
-      limit: limit * 2,
-      contentRating: ["safe", "suggestive"],
-      includes: ["cover_art", "author", "artist"],
-    });
-
-    const filtered = recommendations.data
-      .map((entity) => mapManga(entity))
-      .filter((m) => !allUserIds.includes(m.id));
-
-    return { manga: filtered.slice(0, limit), total: filtered.length };
-  } catch {
-    return getPopular(limit);
+  static async getLatest(limit: number): Promise<{ manga: any[]; total: number }> {
+    const manga = await trendingService.getLatestUpdates(limit);
+    return { manga, total: manga.length };
   }
 }
 
-export async function getHomeData(userId?: string): Promise<{
-  featured: HomeSection;
-  trending: HomeSection;
-  popular: HomeSection;
-  latest: HomeSection;
-  continueReading: HomeSection;
-  recommendations: HomeSection;
-}> {
-  const [
-    featured,
-    trending,
-    popular,
-    latest,
-    continueReading,
-    recommendations,
-  ] = await Promise.allSettled([
-    getFeatured(6),
-    getTrending(10),
-    getPopular(10),
-    getLatest(10),
-    userId ? getContinueReading(userId, 6) : Promise.resolve({ manga: [], total: 0 }),
-    userId ? getRecommendations(userId, 6) : Promise.resolve({ manga: [], total: 0 }),
-  ]);
+export const homeService = new HomeService();
 
-  return {
-    featured: featured.status === "fulfilled" ? featured.value : { manga: [], total: 0 },
-    trending: trending.status === "fulfilled" ? trending.value : { manga: [], total: 0 },
-    popular: popular.status === "fulfilled" ? popular.value : { manga: [], total: 0 },
-    latest: latest.status === "fulfilled" ? latest.value : { manga: [], total: 0 },
-    continueReading: continueReading.status === "fulfilled" ? continueReading.value : { manga: [], total: 0 },
-    recommendations: recommendations.status === "fulfilled" ? recommendations.value : { manga: [], total: 0 },
-  };
-}
+export const getFeatured = HomeService.getFeatured;
+export const getTrending = HomeService.getTrending;
+export const getPopular = HomeService.getPopular;
+export const getLatest = HomeService.getLatest;
+export const getHomeData = (userId?: string) => homeService.getHomeData(userId);

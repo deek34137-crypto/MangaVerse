@@ -1,55 +1,62 @@
-export interface CacheMetrics {
-  hits: number;
-  misses: number;
+export interface TieredCacheMetrics {
+  l1Hits: number;
+  l2Hits: number;
+  dbMisses: number;
+  invalidations: number;
+  evictions: number;
   errors: number;
 }
 
-export function createMetrics(): CacheMetrics {
-  return { hits: 0, misses: 0, errors: 0 };
+const metrics: TieredCacheMetrics = {
+  l1Hits: 0,
+  l2Hits: 0,
+  dbMisses: 0,
+  invalidations: 0,
+  evictions: 0,
+  errors: 0,
+};
+
+export function recordL1Hit(): void {
+  metrics.l1Hits++;
 }
 
-export function recordHit(metrics: CacheMetrics): void {
-  metrics.hits++;
+export function recordL2Hit(): void {
+  metrics.l2Hits++;
 }
 
-export function recordMiss(metrics: CacheMetrics): void {
-  metrics.misses++;
+export function recordDbMiss(): void {
+  metrics.dbMisses++;
 }
 
-export function recordError(metrics: CacheMetrics): void {
-  metrics.errors++;
+export function recordInvalidation(): void {
+  metrics.invalidations++;
 }
 
-export function hitRatio(metrics: CacheMetrics): number {
-  const total = metrics.hits + metrics.misses;
-  return total > 0 ? metrics.hits / total : 0;
-}
-
-const metrics = createMetrics();
-
-export function recordCacheHit(): void {
-  recordHit(metrics);
-}
-
-export function recordCacheMiss(): void {
-  recordMiss(metrics);
+export function recordEviction(): void {
+  metrics.evictions++;
 }
 
 export function recordCacheError(): void {
-  recordError(metrics);
+  metrics.errors++;
 }
 
-export function getCacheMetrics(): CacheMetrics {
-  return { ...metrics };
-}
-
-export function getCacheHitRatio(): number {
-  const total = metrics.hits + metrics.misses;
-  return total > 0 ? metrics.hits / total : 0;
+export function getTieredMetrics() {
+  const total = metrics.l1Hits + metrics.l2Hits + metrics.dbMisses;
+  return {
+    ...metrics,
+    totalRequests: total,
+    l1HitRatio: total > 0 ? Number((metrics.l1Hits / total).toFixed(3)) : 0,
+    l2HitRatio: total > 0 ? Number((metrics.l2Hits / total).toFixed(3)) : 0,
+    dbMissRatio: total > 0 ? Number((metrics.dbMisses / total).toFixed(3)) : 0,
+    overallHitRatio: total > 0 ? Number(((metrics.l1Hits + metrics.l2Hits) / total).toFixed(3)) : 0,
+  };
 }
 
 export function resetCacheMetrics(): void {
-  metrics.hits = 0;
-  metrics.misses = 0;
+  metrics.l1Hits = 0;
+  metrics.l2Hits = 0;
+  metrics.dbMisses = 0;
+  metrics.invalidations = 0;
+  metrics.evictions = 0;
   metrics.errors = 0;
 }

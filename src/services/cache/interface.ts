@@ -3,6 +3,7 @@ export interface CacheBackend {
   set<T>(key: string, value: T, ttlSeconds: number): Promise<void>;
   delete(key: string): Promise<void>;
   clear(): Promise<void>;
+  getMetrics?(): Promise<CacheMetrics | null>;
 }
 
 export interface CacheBackendFactory {

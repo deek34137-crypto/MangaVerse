@@ -1,0 +1,30 @@
+{
+  "manifestSchemaVersion": "1.0",
+  "id": "webtoon",
+  "displayName": "WEBTOON",
+  "providerVersion": "1.0.0",
+  "priority": 4,
+  "baseUrl": "https://www.webtoons.com",
+  "network": {
+    "timeoutMs": 12000,
+    "retries": 2,
+    "rateLimit": {
+      "maxRequests": 2,
+      "intervalMs": 1000
+    }
+  },
+  "cache": {
+    "ttlSearchMs": 300000,
+    "ttlMangaMs": 86400000,
+    "ttlChaptersMs": 1800000,
+    "ttlPagesMs": 86400000
+  },
+  "capabilities": {
+    "search": true,
+    "latest": false,
+    "trending": false,
+    "merge": true,
+    "reader": true
+  },
+  "enabled": true
+}

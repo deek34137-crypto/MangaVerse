@@ -48,44 +48,44 @@ export function Footer() {
   ];
 
   return (
-    <footer className="border-t border-border bg-card/50 backdrop-blur-sm">
-      <div className="container-padded py-16 lg:py-24">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-6">
-          <div className="lg:col-span-2 space-y-6">
+    <footer className="border-t border-ink-700 bg-background/50">
+      <div className="container-padded py-12 lg:py-16">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
+          <div className="lg:col-span-2 space-y-4">
             <Link href="/" className="flex items-center gap-2" aria-label="MangaHub Home">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent">
-                <BookOpen className="h-6 w-6 text-primary-foreground" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
+                <BookOpen className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-display font-bold text-2xl text-foreground">MangaHub</span>
+              <span className="font-display font-bold text-xl text-foreground">MangaHub</span>
             </Link>
-            <p className="text-muted-foreground text-base max-w-xs">
+            <p className="text-ink-400 text-xs max-w-xs leading-relaxed">
               The premium manga reading platform with a cinematic experience.
               Discover, read, and organize your favorite series.
             </p>
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               {socialLinks.map(({ icon: Icon, href, label }) => (
                 <a
                   key={label}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted-foreground transition-colors hover:text-primary"
+                  className="text-ink-400 hover:text-primary transition-colors p-1"
                   aria-label={label}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4.5 w-4.5" />
                 </a>
               ))}
             </div>
           </div>
 
           <nav>
-            <h3 className="font-semibold text-foreground mb-4">Product</h3>
-            <ul className="space-y-3">
+            <h3 className="font-semibold text-xs text-foreground uppercase tracking-wider mb-3">Product</h3>
+            <ul className="space-y-2">
               {navigation.product.map((item) => (
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    className="text-xs text-ink-400 transition-colors hover:text-foreground"
                   >
                     {item.label}
                   </Link>
@@ -95,15 +95,15 @@ export function Footer() {
           </nav>
 
           <nav>
-            <h3 className="font-semibold text-foreground mb-4">Community</h3>
-            <ul className="space-y-3">
+            <h3 className="font-semibold text-xs text-foreground uppercase tracking-wider mb-3">Community</h3>
+            <ul className="space-y-2">
               {navigation.community.map((item) => (
                 <li key={item.label}>
                   <a
                     href={item.href}
                     target={item.external ? "_blank" : undefined}
                     rel={item.external ? "noopener noreferrer" : undefined}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    className="text-xs text-ink-400 transition-colors hover:text-foreground"
                   >
                     {item.label}
                   </a>
@@ -113,13 +113,13 @@ export function Footer() {
           </nav>
 
           <nav>
-            <h3 className="font-semibold text-foreground mb-4">Support</h3>
-            <ul className="space-y-3">
+            <h3 className="font-semibold text-xs text-foreground uppercase tracking-wider mb-3">Support</h3>
+            <ul className="space-y-2">
               {navigation.support.map((item) => (
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    className="text-xs text-ink-400 transition-colors hover:text-foreground"
                   >
                     {item.label}
                   </Link>
@@ -129,13 +129,13 @@ export function Footer() {
           </nav>
 
           <nav>
-            <h3 className="font-semibold text-foreground mb-4">Legal</h3>
-            <ul className="space-y-3">
+            <h3 className="font-semibold text-xs text-foreground uppercase tracking-wider mb-3">Legal</h3>
+            <ul className="space-y-2">
               {navigation.legal.map((item) => (
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    className="text-xs text-ink-400 transition-colors hover:text-foreground"
                   >
                     {item.label}
                   </Link>
@@ -145,26 +145,26 @@ export function Footer() {
           </nav>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-border">
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-10 pt-6 border-t border-ink-700/60">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {features.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
+              <div key={title} className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink-900 border border-ink-700/60 text-ink-300">
+                  <Icon className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-foreground">{title}</h4>
-                  <p className="text-sm text-muted-foreground">{description}</p>
+                  <h4 className="text-xs font-semibold text-foreground">{title}</h4>
+                  <p className="text-[11px] text-ink-400 mt-0.5 leading-snug">{description}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center gap-4 text-sm text-muted-foreground">
+        <div className="mt-8 flex flex-col items-center gap-3 text-[11px] text-ink-400 border-t border-ink-700/60 pt-6">
           <p>© {currentYear} MangaHub. All rights reserved.</p>
-          <p className="flex flex-wrap items-center justify-center gap-2">
-            <span>Built with Next.js, TypeScript, Tailwind CSS, and Framer Motion</span>
+          <p className="text-ink-400/60">
+            Built with Next.js, TypeScript, Tailwind CSS, and Framer Motion
           </p>
         </div>
       </div>

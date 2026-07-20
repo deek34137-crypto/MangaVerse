@@ -1,322 +1,278 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Heart, Bookmark, Clock, Eye, Star, TrendingUp } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn, formatNumber, formatRelativeTime } from "@/lib/utils";
+import { BookOpen, Heart, Bookmark, Clock, Eye, Star, Plus, Check, TrendingUp } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn, formatNumber, formatRelativeTime, getProxiedImageUrl } from "@/lib/utils";
 import type { Manga, LibraryStatus } from "@/types";
 
-const statusLabels: Record<LibraryStatus, string> = {
-  reading: "Reading",
-  completed: "Completed",
-  on_hold: "On Hold",
-  dropped: "Dropped",
-  plan_to_read: "Plan to Read",
-  rereading: "Rereading",
+/* ─── Status config ──────────────────────────────────────────────────────── */
+const STATUS_CONFIG: Record<LibraryStatus, { label: string; color: string; dot: string }> = {
+  reading:       { label: "Reading",       color: "text-primary border-primary/40 bg-primary/10",         dot: "bg-primary" },
+  completed:     { label: "Completed",     color: "text-green-400 border-green-500/40 bg-green-500/10",   dot: "bg-green-400" },
+  on_hold:       { label: "On Hold",       color: "text-yellow-400 border-yellow-500/40 bg-yellow-500/10", dot: "bg-yellow-400" },
+  dropped:       { label: "Dropped",       color: "text-red-400 border-red-500/40 bg-red-500/10",          dot: "bg-red-400" },
+  plan_to_read:  { label: "Plan to Read",  color: "text-muted-foreground border-border bg-muted/50",       dot: "bg-muted-foreground" },
+  rereading:     { label: "Rereading",     color: "text-purple-400 border-purple-500/40 bg-purple-500/10", dot: "bg-purple-400" },
 };
 
-const statusIcons: Record<LibraryStatus, React.ReactNode> = {
-  reading: <BookOpen className="h-3.5 w-3.5" />,
-  completed: <Bookmark className="h-3.5 w-3.5" />,
-  on_hold: <Clock className="h-3.5 w-3.5" />,
-  dropped: <Eye className="h-3.5 w-3.5" />,
-  plan_to_read: <BookOpen className="h-3.5 w-3.5" />,
-  rereading: <TrendingUp className="h-3.5 w-3.5" />,
+const TYPE_COLORS: Record<string, string> = {
+  manga:    "bg-primary/20 text-primary",
+  manhwa:   "bg-cyan-500/20 text-cyan-400",
+  manhua:   "bg-orange-500/20 text-orange-400",
+  novel:    "bg-purple-500/20 text-purple-400",
+  oneshot:  "bg-yellow-500/20 text-yellow-400",
+  doujinshi:"bg-red-500/20 text-red-400",
 };
 
-const statusColors: Record<LibraryStatus, string> = {
-  reading: "border-primary/50 text-primary",
-  completed: "border-green-500/50 text-green-500",
-  on_hold: "border-yellow-500/50 text-yellow-500",
-  dropped: "border-red-500/50 text-red-500",
-  plan_to_read: "border-muted-foreground/50 text-muted-foreground",
-  rereading: "border-purple-500/50 text-purple-500",
-};
-
+/* ─── Props ──────────────────────────────────────────────────────────────── */
 interface MangaCardProps {
   manga: Manga;
   variant?: "default" | "compact" | "featured";
-  showActions?: boolean;
+  showLibraryStatus?: boolean;
+  libraryStatus?: LibraryStatus;
+  onLibraryStatusChange?: (mangaId: string, status: LibraryStatus | null) => void;
   priority?: boolean;
 }
 
-export function MangaCard({ manga, variant = "default", showActions = true, priority = false }: MangaCardProps) {
-  const isCompact = variant === "compact";
+/* ─── Main Card ──────────────────────────────────────────────────────────── */
+export function MangaCard({
+  manga,
+  variant = "default",
+  showLibraryStatus = true,
+  libraryStatus,
+  onLibraryStatusChange,
+  priority = false,
+}: MangaCardProps) {
+  const [hovered, setHovered] = useState(false);
+  const [addedFeedback, setAddedFeedback] = useState(false);
+
+  const isCompact  = variant === "compact";
   const isFeatured = variant === "featured";
 
+  const handleQuickAdd = (e: React.MouseEvent, status: LibraryStatus) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onLibraryStatusChange?.(manga.id, status);
+    setAddedFeedback(true);
+    setTimeout(() => setAddedFeedback(false), 1500);
+  };
+
+  const rating = manga.rating != null ? parseFloat(String(manga.rating)) : null;
+
+  /* ── Widths by variant ── */
+  const wClass = isCompact ? "w-28 sm:w-32" : isFeatured ? "w-48 sm:w-56" : "w-36 sm:w-40 md:w-44";
+
   return (
-    <TooltipProvider>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        layout
+    <motion.div
+      className={cn("group relative flex-shrink-0 flex flex-col", wClass)}
+      onHoverStart={() => setHovered(true)}
+      onHoverEnd={() => setHovered(false)}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      {/* ── Cover image ── */}
+      <Link
+        href={`/manga/${manga.id}`}
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
+        aria-label={`View ${manga.title}`}
       >
-        <Card className={cn(
-          "group relative overflow-hidden h-full transition-all duration-300",
-          "hover:shadow-xl hover:shadow-primary/10 hover:border-primary/20",
-          isCompact && "flex flex-row items-start gap-4 p-3",
-          isFeatured && "relative"
-        )}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={manga.coverImage}
-              initial={{ opacity: 0, scale: 1.05 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className={cn(
-                "relative overflow-hidden bg-muted",
-                isCompact ? "w-24 h-34 flex-shrink-0 rounded-lg" : "aspect-[2/3] rounded-t-lg",
-                isFeatured ? "rounded-lg" : ""
-              )}
-            >
-              <Link href={`/manga/${manga.id}`} aria-label={`Read ${manga.title}`}>
-                {manga.coverImage ? (
-                  <Image
-                    src={manga.coverImage}
-                    alt={manga.title}
-                    fill
-                    sizes={isCompact ? "96px" : isFeatured ? "50vw" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
-                    className="object-cover transition-all duration-500 group-hover:scale-105"
-                    placeholder="blur"
-                    blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                    priority={priority}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20">
-                    <BookOpen className="h-12 w-12 text-primary/50" />
-                  </div>
-                )}
-              </Link>
+        <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-ink-900 border border-ink-800 group-hover:border-primary/40 group-hover:shadow-lg transition-all duration-200">
 
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          {/* Cover */}
+          {manga.coverImage ? (
+            <Image
+              src={getProxiedImageUrl(manga.coverImage)}
+              alt={manga.title}
+              fill
+              className="object-cover transition-transform duration-300 ease-out group-hover:scale-105"
+              loading={priority ? "eager" : "lazy"}
+              sizes={isFeatured ? "224px" : isCompact ? "128px" : "176px"}
+              quality={80}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-ink-900 to-ink-850">
+              <BookOpen className="h-6 w-6 text-ink-500" aria-hidden="true" />
+            </div>
+          )}
 
-              <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1.5">
-                {manga.type !== "manga" && (
-                  <Badge variant="outline" className="text-xs px-2 py-0.5 capitalize">
-                    {manga.type}
-                  </Badge>
-                )}
-                {manga.status !== "ongoing" && (
-                  <Badge variant="outline" className="text-xs px-2 py-0.5 capitalize">
-                    {manga.status.replace("_", " ")}
-                  </Badge>
-                )}
-                {manga.demographic && (
-                  <Badge variant="outline" className="text-xs px-2 py-0.5 capitalize">
-                    {manga.demographic}
-                  </Badge>
-                )}
-              </div>
+          {/* Type badge */}
+          {manga.type && !isCompact && (
+            <div className="absolute top-2 left-2 z-10">
+              <span className={cn(
+                "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md shadow-sm border border-white/[0.04]",
+                TYPE_COLORS[manga.type] ?? "bg-ink-950/80 text-foreground"
+              )}>
+                {manga.type}
+              </span>
+            </div>
+          )}
 
-              <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="flex gap-1.5">
-                  {manga.rating > 0 && (
-                    <Badge variant="secondary" className="gap-1 px-2 py-1">
-                      <Star className="h-3 w-3 fill-current text-yellow-400" />
-                      <span>{manga.rating.toFixed(1)}</span>
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="px-2 py-1">
-                    <Eye className="h-3 w-3 mr-1" />
-                    {formatNumber(manga.viewCount)}
-                  </Badge>
-                </div>
+          {/* Library status chip */}
+          {libraryStatus && (
+            <div className="absolute top-2 right-2 z-10">
+              <span className={cn(
+                "flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border backdrop-blur-md shadow-sm",
+                STATUS_CONFIG[libraryStatus].color
+              )}>
+                <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", STATUS_CONFIG[libraryStatus].dot)} />
+                {isCompact ? "" : STATUS_CONFIG[libraryStatus].label}
+              </span>
+            </div>
+          )}
 
-                {showActions && manga.userData && (
-                  <div className="flex gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm"
+          {/* Hover overlay */}
+          <AnimatePresence>
+            {hovered && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/45 to-transparent z-10"
+              >
+                {/* Quick action buttons */}
+                <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5 px-2">
+                  <motion.button
+                    initial={{ y: 6, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.03, duration: 0.15 }}
+                    onClick={(e) => handleQuickAdd(e, "reading")}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-semibold hover:bg-primary/95 transition-colors cursor-pointer"
+                    aria-label="Start reading"
+                  >
+                    {addedFeedback ? (
+                      <><Check className="h-3 w-3" /> Added</>
+                    ) : (
+                      <><BookOpen className="h-3 w-3" /> Read</>
+                    )}
+                  </motion.button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <motion.button
+                        initial={{ y: 6, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.06, duration: 0.15 }}
+                        onClick={(e) => e.preventDefault()}
+                        className="h-7 w-7 flex items-center justify-center rounded-lg glass border border-border/60 text-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+                        aria-label="Add to library"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </motion.button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44 bg-popover border border-ink-700 shadow-dropdown mt-1 rounded-xl p-1" sideOffset={4}>
+                      {(Object.entries(STATUS_CONFIG) as [LibraryStatus, typeof STATUS_CONFIG[LibraryStatus]][]).map(([status, { label, dot }]) => (
+                        <DropdownMenuItem
+                          key={status}
+                          onClick={(e) => { e.preventDefault(); onLibraryStatusChange?.(manga.id, status); }}
+                          className={cn(
+                            "flex items-center gap-2 cursor-pointer text-xs rounded-lg p-2",
+                            libraryStatus === status && "bg-primary/10 text-primary"
+                          )}
                         >
-                          <Heart className={cn(
-                            "h-4 w-4 transition-colors",
-                            manga.userData.isFavorite ? "fill-current text-red-500" : "text-muted-foreground"
-                          )} />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Add to favorites</TooltipContent>
-                    </Tooltip>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={cn(
-                                "h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm",
-                                statusColors[manga.userData.status]
-                              )}
-                            >
-                              {statusIcons[manga.userData.status]}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">{statusLabels[manga.userData.status]}</TooltipContent>
-                        </Tooltip>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        {(Object.keys(statusLabels) as LibraryStatus[]).map((status) => (
+                          <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", dot)} />
+                          {label}
+                          {libraryStatus === status && <Check className="h-3 w-3 ml-auto" />}
+                        </DropdownMenuItem>
+                      ))}
+                      {libraryStatus && (
+                        <>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            key={status}
-                            className={cn(
-                              manga.userData?.status === status && "bg-accent text-accent-foreground"
-                            )}
-                            onClick={() => {}}
+                            onClick={(e) => { e.preventDefault(); onLibraryStatusChange?.(manga.id, null); }}
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-xs rounded-lg p-2"
                           >
-                            {statusIcons[status]}
-                            <span className="ml-2 capitalize">{statusLabels[status].replace("_", " ")}</span>
+                            Remove from Library
                           </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-              </div>
-
-              {isFeatured && manga.bannerImage && (
-                <div className="absolute inset-0 -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <Image
-                    src={manga.bannerImage}
-                    alt=""
-                    fill
-                    className="object-cover blur-2xl brightness-50"
-                    priority={priority}
-                  />
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              )}
-            </motion.div>
+              </motion.div>
+            )}
           </AnimatePresence>
+        </div>
+      </Link>
 
-          <CardContent className={cn(
-            "p-4 flex flex-col flex-1",
-            isCompact ? "pt-0 justify-between" : "",
-            isFeatured ? "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/95 to-transparent" : ""
-          )}>
-            <div className={cn("min-h-0", isCompact && "flex-1")}>
-              <Link href={`/manga/${manga.id}`} className="block">
-                <h3 className={cn(
-                  "font-semibold leading-tight group-hover:text-primary transition-colors",
-                  isCompact ? "text-sm line-clamp-1" : "text-base line-clamp-2",
-                  isFeatured ? "text-lg" : ""
-                )}>
-                  {manga.title}
-                </h3>
-              </Link>
+      {/* ── Meta info ── */}
+      {!isCompact && (
+        <div className="mt-2 px-0.5 space-y-1 text-left flex-1 flex flex-col justify-between">
+          <div className="space-y-1">
+            <Link href={`/manga/${manga.id}`} tabIndex={-1} className="block">
+              <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors duration-150">
+                {manga.title}
+              </h3>
+            </Link>
 
-              {manga.altTitles.length > 0 && !isCompact && (
-                <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
-                  {manga.altTitles[0]}
-                </p>
+            <div className="flex items-center gap-1.5 text-[10px] text-ink-400">
+              {rating != null && (
+                <span className="flex items-center gap-0.5">
+                  <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                  <span className="font-semibold text-foreground/90">{rating.toFixed(1)}</span>
+                </span>
               )}
-
-              {!isCompact && manga.description && (
-                <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
-                  {manga.description}
-                </p>
+              {rating != null && manga.chapterCount != null && manga.chapterCount > 0 && (
+                <span className="text-ink-600/60">•</span>
               )}
-
-              {!isCompact && manga.genres.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {manga.genres.slice(0, 4).map((genre) => (
-                    <Badge key={genre.id} variant="outline" className="text-xs px-2 py-0.5">
-                      {genre.name}
-                    </Badge>
-                  ))}
-                  {manga.genres.length > 4 && (
-                    <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground">
-                      +{manga.genres.length - 4}
-                    </Badge>
-                  )}
-                </div>
-              )}
-
-              {!isCompact && (
-                <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <BookOpen className="h-3 w-3" />
-                    {manga.chapterCount} chapters
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Heart className="h-3 w-3" />
-                    {formatNumber(manga.followCount)}
-                  </span>
-                  {manga.latestChapter && (
-                    <span className="flex items-center gap-1 ml-auto">
-                      <Clock className="h-3 w-3" />
-                      Ch. {manga.latestChapter.number}
-                      <span className="text-muted-foreground/50">•</span>
-                      {formatRelativeTime(manga.latestChapter.publishedAt)}
-                    </span>
-                  )}
-                </div>
+              {manga.chapterCount != null && manga.chapterCount > 0 && (
+                <span className="font-medium">
+                  {manga.chapterCount} Chs
+                </span>
               )}
             </div>
+          </div>
 
-            {showActions && !isCompact && manga.userData && (
-              <div className="mt-4 flex gap-2 pt-3 border-t border-border/50">
-                <Button
-                  variant={manga.userData.status === "reading" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1 justify-center gap-1.5"
-                  onClick={() => {}}
-                >
-                  <BookOpen className="h-3.5 w-3.5" />
-                  {statusLabels[manga.userData.status].replace("_", " ")}
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9">
-                      <Heart className={cn(
-                        "h-4 w-4 transition-colors",
-                        manga.userData.isFavorite ? "fill-current text-red-500" : "text-muted-foreground"
-                      )} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Add to favorites</TooltipContent>
-                </Tooltip>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </TooltipProvider>
+          {manga.latestChapter && (
+            <p className="text-[10px] text-ink-400/70 flex items-center gap-1 mt-1 pt-1 border-t border-ink-800/40 truncate w-full">
+              <Clock className="h-3 w-3 flex-shrink-0 text-ink-500" />
+              <span className="truncate">Ch.{manga.latestChapter.number}</span>
+              {manga.latestChapter.publishedAt && (
+                <span className="ml-auto flex-shrink-0 text-ink-500">{formatRelativeTime(new Date(manga.latestChapter.publishedAt))}</span>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Compact label ── */}
+      {isCompact && (
+        <p className="mt-1.5 text-[11px] font-semibold text-foreground/80 line-clamp-2 leading-tight px-0.5 text-left">
+          {manga.title}
+        </p>
+      )}
+    </motion.div>
   );
 }
 
-export function MangaCardSkeleton({ variant = "default" }: { variant?: "default" | "compact" }) {
-  const isCompact = variant === "compact";
+/* ─── Skeleton ───────────────────────────────────────────────────────────── */
+export function MangaCardSkeleton({ variant = "default" }: { variant?: "default" | "compact" | "featured" }) {
+  const isCompact  = variant === "compact";
+  const isFeatured = variant === "featured";
+  const wClass = isCompact ? "w-28 sm:w-32" : isFeatured ? "w-48 sm:w-56" : "w-36 sm:w-40 md:w-44";
 
   return (
-    <Card className={cn(
-      "animate-pulse",
-      isCompact && "flex flex-row items-start gap-4 p-3"
-    )}>
-      <div className={cn(
-        "rounded-lg bg-muted",
-        isCompact ? "w-24 h-34 flex-shrink-0" : "aspect-[2/3] rounded-t-lg"
-      )} />
-      <CardContent className={cn("p-4 flex flex-col flex-1", isCompact && "pt-0")}>
-        <div className="h-4 w-3/4 bg-muted rounded mb-2" />
-        <div className="h-3 w-1/2 bg-muted rounded mb-3" />
-        <div className="h-4 w-full bg-muted rounded mb-2" />
-        <div className="h-4 w-5/6 bg-muted rounded mb-2" />
-        <div className="flex gap-2 mt-auto">
-          <div className="h-5 w-16 bg-muted rounded" />
-          <div className="h-5 w-16 bg-muted rounded" />
+    <div className={cn("flex-shrink-0 flex flex-col space-y-2", wClass)} aria-hidden="true">
+      <div className="w-full aspect-[2/3] rounded-2xl loading-shimmer border border-ink-800" />
+      {!isCompact && (
+        <div className="px-0.5 space-y-2 flex-1 flex flex-col justify-between">
+          <div className="space-y-1.5">
+            <div className="h-3.5 w-full rounded-md loading-shimmer" />
+            <div className="h-3 w-2/3 rounded-md loading-shimmer" />
+          </div>
+          <div className="h-3 w-1/2 rounded-md loading-shimmer mt-2 pt-1 border-t border-ink-800/40" />
         </div>
-      </CardContent>
-    </Card>
+      )}
+      {isCompact && (
+        <div className="h-3 w-3/4 rounded-md loading-shimmer" />
+      )}
+    </div>
   );
 }

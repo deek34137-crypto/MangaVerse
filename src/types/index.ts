@@ -29,8 +29,9 @@ export interface Manga {
 export interface Chapter {
   id: string;
   mangaId: string;
-  number: number;
+  number: number | null;
   volume?: number;
+  type: string;
   title?: string;
   language: string;
   pages: ChapterPage[];
@@ -40,6 +41,8 @@ export interface Chapter {
   updatedAt: string;
   scanlatorGroups: ScanlatorGroup[];
   userData?: UserChapterData;
+  provider: string;
+  providerChapterId: string;
 }
 
 export interface ChapterPage {
@@ -183,6 +186,7 @@ export interface LibraryEntry {
   status: LibraryStatus;
   rating?: number;
   progress: number;
+  currentChapter?: number;
   lastReadChapterId?: string;
   lastReadAt?: string;
   isFavorite: boolean;

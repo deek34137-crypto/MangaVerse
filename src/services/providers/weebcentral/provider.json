@@ -1,0 +1,30 @@
+{
+  "manifestSchemaVersion": "1.0",
+  "id": "weebcentral",
+  "displayName": "WeebCentral",
+  "providerVersion": "1.0.0",
+  "priority": 3,
+  "baseUrl": "https://weebcentral.com",
+  "network": {
+    "timeoutMs": 10000,
+    "retries": 3,
+    "rateLimit": {
+      "maxRequests": 3,
+      "intervalMs": 1000
+    }
+  },
+  "cache": {
+    "ttlSearchMs": 300000,
+    "ttlMangaMs": 86400000,
+    "ttlChaptersMs": 3600000,
+    "ttlPagesMs": 86400000
+  },
+  "capabilities": {
+    "search": true,
+    "latest": true,
+    "trending": false,
+    "merge": true,
+    "reader": true
+  },
+  "enabled": true
+}

@@ -1,43 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getHomeData } from "@/services/home";
+import { homeService } from "@/services/home";
+import { cacheGet, cacheSet } from "@/services/cache";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-
     const userId = session?.user?.id;
 
-    const homeData = await getHomeData(userId);
+    const cacheKey = `home:${userId || "anon"}`;
+    const cached = await cacheGet<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
 
-    const response = {
-      version: 1,
-      generatedAt: new Date().toISOString(),
-      data: homeData,
-    };
+    const data = await homeService.getHomeData(userId);
 
-    return NextResponse.json(response, {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-      },
-    });
+    await cacheSet(cacheKey, data, 1800); // 30 minutes
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Home API error:", error);
-
-    return NextResponse.json(
-      {
-        version: 1,
-        generatedAt: new Date().toISOString(),
-        data: {
-          featured: { manga: [], total: 0, error: true },
-          trending: { manga: [], total: 0, error: true },
-          popular: { manga: [], total: 0, error: true },
-          latest: { manga: [], total: 0, error: true },
-          continueReading: { manga: [], total: 0, error: true },
-          recommendations: { manga: [], total: 0, error: true },
-        },
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

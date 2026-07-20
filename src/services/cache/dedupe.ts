@@ -1,12 +1,17 @@
 const inflight = new Map<string, Promise<any>>();
 
-export function withDeduplication<T>(
-  key: string,
-  fn: () => Promise<T>
-): Promise<T> {
+interface DeduplicationOptions<T> {
+  key: string;
+  fn: () => Promise<T>;
+  maxAge?: number;
+}
+
+export async function withDeduplication<T>(options: { key: string; fn: () => Promise<T>; maxAge?: number }): Promise<any> {
+  const { key, fn, maxAge = 30000 } = options;
+
   const existing = inflight.get(key);
   if (existing) {
-    return existing as Promise<T>;
+    return existing as Promise<any>;
   }
 
   const promise = (async () => {
@@ -18,6 +23,11 @@ export function withDeduplication<T>(
   })();
 
   inflight.set(key, promise);
+
+  setTimeout(() => {
+    inflight.delete(key);
+  }, 30000);
+
   return promise;
 }
 

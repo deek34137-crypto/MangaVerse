@@ -1,5 +1,5 @@
-import { pgTable, uuid, varchar, text, integer, boolean, timestamp, decimal, jsonb, index, uniqueIndex, foreignKey, primaryKey } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, uuid, varchar, text, integer, boolean, timestamp, decimal, jsonb, index, uniqueIndex, primaryKey, bigint } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -34,18 +34,10 @@ export const userPreferences = pgTable("user_preferences", {
   showMature: boolean("show_mature").default(false).notNull(),
   languages: jsonb("languages").default(["en"]).notNull(),
   notifications: jsonb("notifications").default({
-    email: true,
-    push: true,
-    newChapter: true,
-    libraryUpdates: true,
-    recommendations: true,
-    social: true,
+    email: true, push: true, newChapter: true, libraryUpdates: true, recommendations: true, social: true
   }).notNull(),
   privacy: jsonb("privacy").default({
-    profileVisibility: "public",
-    libraryVisibility: "public",
-    historyVisibility: "private",
-    activityVisibility: "public",
+    profileVisibility: "public", libraryVisibility: "public", historyVisibility: "private", activityVisibility: "public"
   }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -98,6 +90,7 @@ export const sessions = pgTable("sessions", {
 
 export const manga = pgTable("manga", {
   id: uuid("id").primaryKey().defaultRandom(),
+  slug: varchar("slug", { length: 500 }).unique(),
   title: varchar("title", { length: 500 }).notNull(),
   altTitles: jsonb("alt_titles").default([]).notNull(),
   description: text("description"),
@@ -117,13 +110,24 @@ export const manga = pgTable("manga", {
   latestChapterId: uuid("latest_chapter_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  viewsScore: decimal("views_score", { precision: 10, scale: 4 }).default("0").notNull(),
+  followsScore: decimal("follows_score", { precision: 10, scale: 4 }).default("0").notNull(),
+  ratingScore: decimal("rating_score", { precision: 10, scale: 4 }).default("0").notNull(),
+  freshnessScore: decimal("freshness_score", { precision: 10, scale: 4 }).default("0").notNull(),
+  editorBoost: decimal("editor_boost", { precision: 10, scale: 4 }).default("0").notNull(),
+  finalTrendingScore: decimal("final_trending_score", { precision: 10, scale: 4 }).default("0").notNull(),
+  version: integer("version").default(1).notNull(),
 }, (table) => ({
   titleIdx: index("manga_title_idx").on(table.title),
+  slugIdx: uniqueIndex("manga_slug_idx").on(table.slug),
   statusIdx: index("manga_status_idx").on(table.status),
   typeIdx: index("manga_type_idx").on(table.type),
   ratingIdx: index("manga_rating_idx").on(table.rating),
   followCountIdx: index("manga_follow_count_idx").on(table.followCount),
   updatedAtIdx: index("manga_updated_at_idx").on(table.updatedAt),
+  finalTrendingScoreIdx: index("manga_final_trending_score_idx").on(table.finalTrendingScore),
+  createdAtIdx: index("manga_created_at_idx").on(table.createdAt),
+  viewCountIdx: index("manga_view_count_idx").on(table.viewCount),
 }));
 
 export const genres = pgTable("genres", {
@@ -183,6 +187,7 @@ export const mangaGenres = pgTable("manga_genres", {
   genreId: uuid("genre_id").notNull().references(() => genres.id, { onDelete: "cascade" }),
 }, (table) => ({
   pk: primaryKey({ columns: [table.mangaId, table.genreId] }),
+  genreIdIdx: index("manga_genres_genre_id_idx").on(table.genreId),
 }));
 
 export const mangaTags = pgTable("manga_tags", {
@@ -190,6 +195,7 @@ export const mangaTags = pgTable("manga_tags", {
   tagId: uuid("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
 }, (table) => ({
   pk: primaryKey({ columns: [table.mangaId, table.tagId] }),
+  tagIdIdx: index("manga_tags_tag_id_idx").on(table.tagId),
 }));
 
 export const mangaAuthors = pgTable("manga_authors", {
@@ -197,6 +203,7 @@ export const mangaAuthors = pgTable("manga_authors", {
   authorId: uuid("author_id").notNull().references(() => authors.id, { onDelete: "cascade" }),
 }, (table) => ({
   pk: primaryKey({ columns: [table.mangaId, table.authorId] }),
+  authorIdIdx: index("manga_authors_author_id_idx").on(table.authorId),
 }));
 
 export const mangaArtists = pgTable("manga_artists", {
@@ -204,23 +211,24 @@ export const mangaArtists = pgTable("manga_artists", {
   artistId: uuid("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" }),
 }, (table) => ({
   pk: primaryKey({ columns: [table.mangaId, table.artistId] }),
+  artistIdIdx: index("manga_artists_artist_id_idx").on(table.artistId),
 }));
 
 export const chapters = pgTable("chapters", {
   id: uuid("id").primaryKey().defaultRandom(),
   mangaId: uuid("manga_id").notNull().references(() => manga.id, { onDelete: "cascade" }),
-  number: decimal("number", { precision: 10, scale: 2 }).notNull(),
+  number: decimal("number", { precision: 10, scale: 2 }), // Nullable for non-numeric chapters
   volume: integer("volume"),
+  type: varchar("type", { length: 50 }).default("regular").notNull(),
   title: varchar("title", { length: 500 }),
-  language: varchar("language", { length: 10 }).default("en").notNull(),
-  pageCount: integer("page_count").default(0).notNull(),
-  publishedAt: timestamp("published_at").notNull(),
+  sortKey: bigint("sort_key", { mode: "bigint" }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  mangaNumberIdx: uniqueIndex("chapters_manga_number_idx").on(table.mangaId, table.number, table.language),
+  mangaNumberIdx: uniqueIndex("chapters_manga_number_unique_idx").on(table.mangaId, table.number).where(sql`number IS NOT NULL`),
+  mangaSpecialIdx: uniqueIndex("chapters_manga_special_unique_idx").on(table.mangaId, table.title).where(sql`number IS NULL`),
   mangaIdx: index("chapters_manga_idx").on(table.mangaId),
-  publishedAtIdx: index("chapters_published_at_idx").on(table.publishedAt),
+  sortKeyIdx: index("chapters_sort_key_idx").on(table.mangaId, table.sortKey),
 }));
 
 export const chapterPages = pgTable("chapter_pages", {
@@ -355,6 +363,80 @@ export const notifications = pgTable("notifications", {
   createdAtIdx: index("notifications_created_at_idx").on(table.createdAt),
 }));
 
+export const editorialCollections = pgTable("editorial_collections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).default("editorial").notNull(),
+  priority: integer("priority").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  startsAt: timestamp("starts_at"),
+  endsAt: timestamp("ends_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  slugIdx: uniqueIndex("editorial_collections_slug_idx").on(table.slug),
+  isActiveIdx: index("editorial_collections_is_active_idx").on(table.isActive),
+  priorityIdx: index("editorial_collections_priority_idx").on(table.priority),
+}));
+
+export const editorialCollectionItems = pgTable("editorial_collection_items", {
+  collectionId: uuid("collection_id").notNull().references(() => editorialCollections.id, { onDelete: "cascade" }),
+  mangaId: uuid("manga_id").notNull().references(() => manga.id, { onDelete: "cascade" }),
+  displayOrder: integer("display_order").default(0).notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.collectionId, table.mangaId] }),
+  displayOrderIdx: index("editorial_collection_items_display_order_idx").on(table.displayOrder),
+}));
+
+export const siteAnnouncements = pgTable("site_announcements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  type: varchar("type", { length: 50 }).default("info").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  startsAt: timestamp("starts_at").defaultNow().notNull(),
+  endsAt: timestamp("ends_at"),
+  priority: integer("priority").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  isActiveIdx: index("site_announcements_is_active_idx").on(table.isActive),
+  priorityIdx: index("site_announcements_priority_idx").on(table.priority),
+  startsAtIdx: index("site_announcements_starts_at_idx").on(table.startsAt),
+}));
+
+export const mangaViews = pgTable("manga_views", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  mangaId: uuid("manga_id").notNull().references(() => manga.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  viewedAt: timestamp("viewed_at").defaultNow().notNull(),
+}, (table) => ({
+  mangaIdx: index("manga_views_manga_idx").on(table.mangaId),
+  userIdx: index("manga_views_user_idx").on(table.userId),
+  viewedAtIdx: index("manga_views_viewed_at_idx").on(table.viewedAt),
+}));
+
+export const libraryEntries = pgTable("library_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mangaId: uuid("manga_id").notNull().references(() => manga.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 20 }).default("plan_to_read").notNull(),
+  rating: decimal("rating", { precision: 3, scale: 2 }),
+  progress: integer("progress").default(0).notNull(),
+  lastReadChapterId: uuid("last_read_chapter_id").references(() => chapters.id, { onDelete: "set null" }),
+  lastReadAt: timestamp("last_read_at"),
+  isFavorite: boolean("is_favorite").default(false).notNull(),
+  notes: text("notes"),
+  tags: jsonb("tags").default([]).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userMangaIdx: uniqueIndex("library_entries_user_manga_idx").on(table.userId, table.mangaId),
+  userIdx: index("library_entries_user_idx").on(table.userId),
+  statusIdx: index("library_entries_status_idx").on(table.status),
+  updatedAtIdx: index("library_entries_updated_at_idx").on(table.updatedAt),
+}));
 export const usersRelations = relations(users, ({ one, many }) => ({
   preferences: one(userPreferences, { fields: [users.id], references: [userPreferences.userId] }),
   stats: one(userStats, { fields: [users.id], references: [userStats.userId] }),
@@ -378,7 +460,6 @@ export const userPreferencesRelations = relations(userPreferences, ({ one }) => 
 export const userStatsRelations = relations(userStats, ({ one }) => ({
   user: one(users, { fields: [userStats.userId], references: [users.id] }),
 }));
-
 export const oauthAccountsRelations = relations(oauthAccounts, ({ one }) => ({
   user: one(users, { fields: [oauthAccounts.userId], references: [users.id] }),
 }));
@@ -399,6 +480,9 @@ export const mangaRelations = relations(manga, ({ one, many }) => ({
   reviews: many(reviews),
   follows: many(mangaFollows),
   latestChapter: one(chapters, { fields: [manga.latestChapterId], references: [chapters.id] }),
+  providers: many(mangaProvider),
+  aliases: many(mangaAlias),
+  provenances: many(metadataProvenance),
 }));
 
 export const genresRelations = relations(genres, ({ many }) => ({
@@ -439,7 +523,7 @@ export const mangaAuthorsRelations = relations(mangaAuthors, ({ one }) => ({
 export const mangaArtistsRelations = relations(mangaArtists, ({ one }) => ({
   manga: one(manga, { fields: [mangaArtists.mangaId], references: [manga.id] }),
   artist: one(artists, { fields: [mangaArtists.artistId], references: [artists.id] }),
-}));
+}) );
 
 export const chaptersRelations = relations(chapters, ({ one, many }) => ({
   manga: one(manga, { fields: [chapters.mangaId], references: [manga.id] }),
@@ -447,6 +531,7 @@ export const chaptersRelations = relations(chapters, ({ one, many }) => ({
   scanlatorGroups: many(chapterScanlatorGroups),
   library: many(library),
   history: many(history),
+  providers: many(chapterProvider),
 }));
 
 export const chapterPagesRelations = relations(chapterPages, ({ one }) => ({
@@ -499,4 +584,152 @@ export const mangaFollowsRelations = relations(mangaFollows, ({ one }) => ({
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
 }));
+
+export const editorialCollectionsRelations = relations(editorialCollections, ({ many }) => ({
+  items: many(editorialCollectionItems),
+}));
+
+export const editorialCollectionItemsRelations = relations(editorialCollectionItems, ({ one }) => ({
+  collection: one(editorialCollections, { fields: [editorialCollectionItems.collectionId], references: [editorialCollections.id] }),
+  manga: one(manga, { fields: [editorialCollectionItems.mangaId], references: [manga.id] }),
+}));
+
+export const siteAnnouncementsRelations = relations(siteAnnouncements, () => ({}));
+
+export const mangaViewsRelations = relations(mangaViews, ({ one }) => ({
+  manga: one(manga, { fields: [mangaViews.mangaId], references: [manga.id] }),
+  user: one(users, { fields: [mangaViews.userId], references: [users.id] }),
+}));
+
+export const libraryEntriesRelations = relations(libraryEntries, ({ one }) => ({
+  user: one(users, { fields: [libraryEntries.userId], references: [users.id] }),
+  manga: one(manga, { fields: [libraryEntries.mangaId], references: [manga.id] }),
+  lastReadChapter: one(chapters, { fields: [libraryEntries.lastReadChapterId], references: [chapters.id] }),
+}));
+
+export const syncJobs = pgTable("sync_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  type: varchar("type", { length: 50 }).notNull(),
+  targetId: varchar("target_id", { length: 255 }),
+  payload: jsonb("payload").notNull(),
+  priority: integer("priority").default(50).notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  maxAttempts: integer("max_attempts").default(5).notNull(),
+  runAt: timestamp("run_at").defaultNow().notNull(),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index("sync_jobs_status_idx").on(table.status),
+  runAtIdx: index("sync_jobs_run_at_idx").on(table.runAt),
+  priorityIdx: index("sync_jobs_priority_idx").on(table.priority),
+  uniquePendingIdx: uniqueIndex("sync_jobs_unique_pending_idx")
+    .on(table.type, table.targetId)
+    .where(sql`status IN ('pending', 'processing')`),
+}));
+
+export const mangaProvider = pgTable("manga_provider", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  mangaId: uuid("manga_id").notNull().references(() => manga.id, { onDelete: "cascade" }),
+  provider: varchar("provider", { length: 50 }).notNull(),
+  providerMangaId: varchar("provider_manga_id", { length: 255 }).notNull(),
+  providerUrl: varchar("provider_url", { length: 500 }),
+  lastSyncedAt: timestamp("last_synced_at"),
+  lastSuccessAt: timestamp("last_success_at"),
+  syncState: jsonb("sync_state"),
+  rawMetadata: jsonb("raw_metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  providerMangaIdx: uniqueIndex("manga_provider_unique_idx").on(table.provider, table.providerMangaId),
+  mangaIdx: index("manga_provider_manga_idx").on(table.mangaId),
+}));
+
+export const chapterProvider = pgTable("chapter_provider", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  chapterId: uuid("chapter_id").notNull().references(() => chapters.id, { onDelete: "cascade" }),
+  provider: varchar("provider", { length: 50 }).notNull(),
+  providerChapterId: varchar("provider_chapter_id", { length: 255 }).notNull(),
+  displayNumber: varchar("display_number", { length: 50 }),
+  title: varchar("title", { length: 500 }),
+  language: varchar("language", { length: 10 }).default("en").notNull(),
+  pageCount: integer("page_count").default(0).notNull(),
+  pages: jsonb("pages").default([]).notNull(),
+  pageHash: varchar("page_hash", { length: 64 }),
+  publishedAt: timestamp("published_at"),
+  lastFetched: timestamp("last_fetched"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  providerChapterIdx: uniqueIndex("chapter_provider_unique_idx").on(table.provider, table.providerChapterId),
+  chapterIdx: index("chapter_provider_chapter_idx").on(table.chapterId),
+}));
+
+export const metadataProvenance = pgTable("metadata_provenance", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  mangaId: uuid("manga_id").notNull().references(() => manga.id, { onDelete: "cascade" }),
+  fieldName: varchar("field_name", { length: 100 }).notNull(),
+  provider: varchar("provider", { length: 50 }).notNull(),
+  providerVersion: varchar("provider_version", { length: 20 }),
+  valueHash: varchar("value_hash", { length: 64 }),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  version: integer("version").default(1).notNull(),
+}, (table) => ({
+  mangaFieldIdx: index("metadata_provenance_manga_field_idx").on(table.mangaId, table.fieldName),
+}));
+
+export const mangaAlias = pgTable("manga_alias", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  mangaId: uuid("manga_id").notNull().references(() => manga.id, { onDelete: "cascade" }),
+  alias: varchar("alias", { length: 500 }).notNull(),
+  normalizedAlias: varchar("normalized_alias", { length: 500 }).notNull(),
+  language: varchar("language", { length: 10 }),
+  provider: varchar("provider", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  mangaIdx: index("manga_alias_manga_idx").on(table.mangaId),
+  normalizedAliasIdx: index("manga_alias_normalized_idx").on(table.normalizedAlias),
+}));
+
+export const mangaMatchReview = pgTable("manga_match_review", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  incomingProvider: varchar("incoming_provider", { length: 50 }).notNull(),
+  providerMangaId: varchar("provider_manga_id", { length: 255 }).notNull(),
+  candidateMangaId: uuid("candidate_manga_id").references(() => manga.id, { onDelete: "cascade" }),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(),
+  decision: varchar("decision", { length: 20 }).default("pending").notNull(),
+  reviewedBy: uuid("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const auditLog = pgTable("audit_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: varchar("provider", { length: 50 }).notNull(),
+  fieldName: varchar("field_name", { length: 100 }).notNull(),
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  reason: varchar("reason", { length: 255 }),
+  traceId: uuid("trace_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Relationships
+export const mangaProviderRelations = relations(mangaProvider, ({ one }) => ({
+  manga: one(manga, { fields: [mangaProvider.mangaId], references: [manga.id] }),
+}));
+
+export const chapterProviderRelations = relations(chapterProvider, ({ one }) => ({
+  chapter: one(chapters, { fields: [chapterProvider.chapterId], references: [chapters.id] }),
+}));
+
+export const mangaAliasRelations = relations(mangaAlias, ({ one }) => ({
+  manga: one(manga, { fields: [mangaAlias.mangaId], references: [manga.id] }),
+}));
+
+export const metadataProvenanceRelations = relations(metadataProvenance, ({ one }) => ({
+  manga: one(manga, { fields: [metadataProvenance.mangaId], references: [manga.id] }),
+}));
+
 

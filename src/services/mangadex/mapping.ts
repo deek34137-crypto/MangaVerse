@@ -6,6 +6,7 @@ import type {
   MangaDexRelationship,
 } from "./types";
 import type { Manga, Chapter, ChapterPage, Genre, Tag, Author, Artist, ScanlatorGroup, MangaStatus } from "@/types";
+import { buildMangaDexCoverUrl } from "@/lib/cover-url";
 
 function findRelationship(relationships: MangaDexRelationship[], type: string): MangaDexRelationship | undefined {
   return relationships.find(r => r.type === type);
@@ -97,7 +98,7 @@ export function mapManga(
     title: getLocalizedString(attributes.title),
     altTitles: (attributes.altTitles || []).map(t => getLocalizedString(t)),
     description: getLocalizedString(attributes.description),
-    coverImage: coverUrl || `https://uploads.mangadex.org/covers/${id}/${fileName}.512.jpg` || "",
+    coverImage: coverUrl || (fileName ? buildMangaDexCoverUrl(id, fileName, 512) : ""),
     status: mapMangaStatus(attributes.status),
     type: mapMangaType(attributes.originalLanguage),
     genres: mdGenres,
@@ -138,11 +139,24 @@ export function mapMangaChapter(
     }
   }
 
+  const rawCh = attributes.chapter;
+  const number = rawCh && !isNaN(parseFloat(rawCh)) ? parseFloat(rawCh) : null;
+  let type = "regular";
+  if (number === null) {
+    const titleLower = (attributes.title || "").toLowerCase();
+    if (titleLower.includes("oneshot") || titleLower.includes("one-shot")) type = "oneshot";
+    else if (titleLower.includes("extra")) type = "extra";
+    else if (titleLower.includes("omake")) type = "omake";
+    else if (titleLower.includes("bonus")) type = "bonus";
+    else type = "special";
+  }
+
   return {
     id,
     mangaId,
-    number: parseFloat(attributes.chapter || "0"),
+    number,
     volume: attributes.volume ? parseInt(attributes.volume) : undefined,
+    type,
     title: attributes.title || undefined,
     language: attributes.translatedLanguage,
     pages: [],
@@ -151,6 +165,8 @@ export function mapMangaChapter(
     createdAt: attributes.createdAt,
     updatedAt: attributes.updatedAt,
     scanlatorGroups,
+    provider: "mangadex",
+    providerChapterId: id,
   };
 }
 

@@ -271,3 +271,51 @@ export function pickRandom<T>(array: T[], count: number = 1): T[] {
   const shuffled = shuffleArray(array);
   return shuffled.slice(0, count);
 }
+
+export function getProxiedImageUrl(url: string | null | undefined): string {
+  if (!url) return "";
+
+  // Unnest double-proxied URLs (e.g. if a cover was stored already proxied)
+  let currentUrl = url;
+  while (currentUrl.includes("/api/image?url=")) {
+    const match = currentUrl.match(/[\?&]url=([^&]+)/);
+    if (match?.[1]) {
+      currentUrl = decodeURIComponent(match[1]);
+    } else {
+      break;
+    }
+  }
+
+  // Pass through relative paths, data URIs, and blob URLs — they're already local.
+  if (
+    currentUrl.startsWith("/") ||
+    currentUrl.startsWith("data:") ||
+    currentUrl.startsWith("blob:")
+  ) {
+    return currentUrl;
+  }
+
+  // All external http(s) URLs are proxied.
+  // This means every provider CDN works automatically without domain whitelisting.
+  if (currentUrl.startsWith("http://") || currentUrl.startsWith("https://")) {
+    return `/api/image?url=${encodeURIComponent(currentUrl)}`;
+  }
+
+  // Fallback: return as-is (handles edge cases like protocol-relative URLs)
+  return currentUrl;
+}
+
+/**
+ * Safely serialize objects containing BigInt, Date, Map, or Set into JSON response payloads.
+ */
+export function safeJsonResponse(data: any, init?: ResponseInit) {
+  const serialized = JSON.parse(
+    JSON.stringify(data, (_key, value) => {
+      if (typeof value === "bigint") return value.toString();
+      if (value instanceof Map) return Object.fromEntries(value);
+      if (value instanceof Set) return Array.from(value);
+      return value;
+    })
+  );
+  return Response.json(serialized, init);
+}

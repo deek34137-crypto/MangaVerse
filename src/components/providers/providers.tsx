@@ -2,14 +2,19 @@
 
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
+import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
+import { PageTransition } from "@/components/ui/PageTransition";
+import { MotionConfig } from "framer-motion";
 
 interface ProvidersProps {
   children: ReactNode;
 }
 
 export function Providers({ children }: ProvidersProps) {
+  const pathname = usePathname();
+
   return (
     <SessionProvider>
       <ThemeProvider
@@ -18,7 +23,11 @@ export function Providers({ children }: ProvidersProps) {
         enableSystem
         disableTransitionOnChange
       >
-        {children}
+        <MotionConfig reducedMotion="user">
+          <PageTransition routeKey={pathname}>
+            {children}
+          </PageTransition>
+        </MotionConfig>
         <Toaster />
       </ThemeProvider>
     </SessionProvider>

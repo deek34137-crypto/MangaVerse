@@ -1,18 +1,18 @@
-import { Inter, Cal_Sans, JetBrains_Mono } from "next/font/google";
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/providers";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-sans",
   display: "swap",
 });
 
-const calSans = Cal_Sans({
+const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
-  weight: ["400"],
+  weight: ["600"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -22,6 +22,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
   title: {
     default: "MangaHub - Premium Manga Reading Platform",
     template: "%s | MangaHub",
@@ -45,11 +46,6 @@ export const metadata = {
     title: "MangaHub - Premium Manga Reading Platform",
     description: "Read manga online with a premium, cinematic experience.",
   },
-  icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
-  },
   manifest: "/site.webmanifest",
 };
 
@@ -65,7 +61,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${inter.variable} ${calSans.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
         <Providers>{children}</Providers>
       </body>

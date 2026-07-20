@@ -9,25 +9,15 @@ interface MangaPageProps {
   params: Promise<{ id: string }>;
 }
 
-async function getMangaData(id: string) {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/manga/${id}`, {
-    next: { revalidate: 60 },
-  });
-  if (!response.ok) return null;
-  return response.json();
-}
+import { getMangaDetail, getChaptersDetail } from "@/services/manga";
 
-async function getChaptersData(id: string) {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/manga/${id}/chapters`, {
-    next: { revalidate: 60 },
-  });
-  if (!response.ok) return [];
-  return response.json();
+interface MangaPageProps {
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: MangaPageProps): Promise<Metadata> {
   const { id } = await params;
-  const manga = await getMangaData(id);
+  const manga = await getMangaDetail(id);
   
   if (!manga) {
     return { title: "Manga Not Found" };
@@ -53,14 +43,19 @@ export async function generateMetadata({ params }: MangaPageProps): Promise<Meta
 
 export default async function MangaPage({ params }: MangaPageProps) {
   const { id } = await params;
-  const [manga, chapters] = await Promise.all([
-    getMangaData(id),
-    getChaptersData(id),
-  ]);
+  const t0 = performance.now();
 
+  // Load sequentially to prevent concurrent MangaDex sync collisions
+  console.log(`[MangaPage] Server fetching details for ${id}...`);
+  const manga = await getMangaDetail(id);
+  
   if (!manga) {
+    console.warn(`[MangaPage] Manga details empty for ${id} (took ${(performance.now() - t0).toFixed(1)}ms)`);
     notFound();
   }
+
+  const chapters = await getChaptersDetail(id);
+  console.log(`[MangaPage] Fetched ${chapters.length} chapters (took ${(performance.now() - t0).toFixed(1)}ms total)`);
 
   return (
     <div className="min-h-screen flex flex-col">

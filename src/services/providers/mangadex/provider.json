@@ -1,0 +1,30 @@
+{
+  "manifestSchemaVersion": "1.0",
+  "id": "mangadex",
+  "displayName": "MangaDex",
+  "providerVersion": "1.0.0",
+  "priority": 1,
+  "baseUrl": "https://api.mangadex.org",
+  "network": {
+    "timeoutMs": 10000,
+    "retries": 3,
+    "rateLimit": {
+      "maxRequests": 5,
+      "intervalMs": 1000
+    }
+  },
+  "cache": {
+    "ttlSearchMs": 300000,
+    "ttlMangaMs": 86400000,
+    "ttlChaptersMs": 3600000,
+    "ttlPagesMs": 86400000
+  },
+  "capabilities": {
+    "search": true,
+    "latest": true,
+    "trending": false,
+    "merge": true,
+    "reader": true
+  },
+  "enabled": true
+}
