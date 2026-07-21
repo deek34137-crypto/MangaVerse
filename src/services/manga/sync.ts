@@ -371,7 +371,12 @@ export async function syncChapterPages(chapterProviderId: string): Promise<void>
 
   console.log(`[ReaderTrace] Provider "${link.provider}" returned ${rawPages.length} pages in ${fetchMs}ms`);
 
-  // Save the pages list directly to database
+  if (rawPages.length === 0) {
+    console.warn(`[ReaderTrace] Provider "${link.provider}" returned 0 pages for chapter ${link.providerChapterId}. Skipping DB overwrite to prevent caching empty state.`);
+    throw new Error(`Provider "${link.provider}" returned 0 pages for chapter ${link.providerChapterId}`);
+  }
+
+  // Save the non-empty pages list directly to database
   await db
     .update(chapterProviderTable)
     .set({

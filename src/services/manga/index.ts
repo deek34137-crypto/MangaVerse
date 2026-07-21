@@ -173,7 +173,8 @@ export async function getChaptersDetail(mangaId: string): Promise<any[]> {
         return priorityA - priorityB;
       });
 
-      const bestLink = links[0];
+      // Prioritize provider link with populated pages > 0, falling back to priority ranking
+      const bestLink = links.find((l) => (l.pages as any)?.length > 0) || links[0];
 
       return {
         id: chapter.id,
