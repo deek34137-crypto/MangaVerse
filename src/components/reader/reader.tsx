@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import {
@@ -40,6 +40,7 @@ interface ReaderSettings {
   quality: "low" | "medium" | "high" | "original";
   autoAdvance: boolean;
   showPageNumbers: boolean;
+  preserveZoom: boolean;
   fit: "width" | "height" | "contain" | "cover";
 }
  
@@ -50,6 +51,7 @@ const defaultSettings: ReaderSettings = {
   quality: "high",
   autoAdvance: false,
   showPageNumbers: true,
+  preserveZoom: false,
   fit: "width",
 };
  
@@ -194,7 +196,39 @@ export function Reader({
  
   useEffect(() => {
     setCurrentPage(1);
-  }, [chapter.id]);
+    if (!settings.preserveZoom) {
+      setZoom(100);
+    }
+  }, [chapter.id, settings.preserveZoom]);
+
+  // Touch Edge Swipe-Back Gesture Handling (Edge swipe left-to-right when zoom is 100% returns to Manga Details)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      // Only register if touch begins near the left edge (< 30px)
+      if (touch.clientX < 30) {
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+      } else {
+        touchStartRef.current = null;
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartRef.current && zoom === 100 && e.changedTouches.length === 1) {
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+
+      // If horizontal swipe right > 80px and vertical drift < 50px, navigate back
+      if (deltaX > 80 && deltaY < 50) {
+        onClose();
+      }
+    }
+    touchStartRef.current = null;
+  };
  
   // Browser fullscreen API sync
   useEffect(() => {
@@ -307,6 +341,8 @@ export function Reader({
       )}
       onClick={() => setShowControls(true)}
       onKeyDown={handleKeyDown}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       tabIndex={0}
     >
       <TooltipProvider>
@@ -322,11 +358,18 @@ export function Reader({
                 <div className="flex items-center gap-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close reader" className="h-9 w-9">
-                        <ChevronLeft className="h-5 w-5" />
+                      <Button
+                        variant="ghost"
+                        onClick={onClose}
+                        aria-label="Back to Manga Details"
+                        className="h-9 px-2.5 flex items-center gap-1 text-xs font-semibold text-foreground hover:bg-muted/80 rounded-lg touch-target"
+                      >
+                        <ChevronLeft className="h-4 w-4 text-primary" />
+                        <span className="hidden sm:inline">Back to Manga</span>
+                        <span className="sm:hidden">Back</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom">Close (Esc)</TooltipContent>
+                    <TooltipContent side="bottom">Back to Manga Details (Esc)</TooltipContent>
                   </Tooltip>
  
                   {/* Interactive Chapter Selector Dropdown */}
@@ -641,6 +684,13 @@ export function Reader({
                   <Switch
                     checked={settings.showPageNumbers}
                     onCheckedChange={checked => setSettings(p => ({ ...p, showPageNumbers: checked }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-foreground">Preserve Zoom Level</span>
+                  <Switch
+                    checked={settings.preserveZoom}
+                    onCheckedChange={checked => setSettings(p => ({ ...p, preserveZoom: checked }))}
                   />
                 </div>
               </div>

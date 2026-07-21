@@ -109,7 +109,10 @@ function TiltCover({ manga }: { manga: Manga }) {
   );
 }
  
+import { useRouter } from "next/navigation";
+
 export function MangaDetail({ manga, chapters }: MangaDetailProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("info");
   const [readingStatus, setReadingStatus] = useState<LibraryStatus>(manga.userData?.status || "plan_to_read");
   const [showReader, setShowReader] = useState(false);
@@ -124,11 +127,30 @@ export function MangaDetail({ manga, chapters }: MangaDetailProps) {
     prefetchChapter,
   } = useChapterDetail(manga.id, startChapter || null, showReader);
 
+  // Restore scroll position on return from Reader
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedScroll = sessionStorage.getItem(`mangahub_manga_scroll_${manga.id}`);
+    if (savedScroll) {
+      const pos = parseInt(savedScroll, 10);
+      if (!isNaN(pos) && pos > 0) {
+        setTimeout(() => window.scrollTo({ top: pos, behavior: "instant" as any }), 50);
+      }
+    }
+  }, [manga.id]);
+
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const openChapter = (chapterId: string) => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(`mangahub_manga_scroll_${manga.id}`, window.scrollY.toString());
+    }
+    router.push(`/manga/${manga.id}/chapter/${chapterId}`);
+  };
 
   const sortedChapters = [...chapters].sort((a, b) => Number(b.number) - Number(a.number));
   const volumes = sortedChapters.reduce((acc, chapter) => {
@@ -257,8 +279,7 @@ export function MangaDetail({ manga, chapters }: MangaDetailProps) {
                           setReadingStatus("reading");
                           const firstChapter = chapters[0]?.id;
                           if (firstChapter) {
-                            setStartChapter(firstChapter);
-                            setShowReader(true);
+                            openChapter(firstChapter);
                           }
                         }}
                       >
@@ -461,7 +482,7 @@ export function MangaDetail({ manga, chapters }: MangaDetailProps) {
                               key={chapter.id}
                               chapter={chapter}
                               onMouseEnter={() => prefetchChapter(chapter.id)}
-                              onClick={() => { setStartChapter(chapter.id); setShowReader(true); }}
+                              onClick={() => openChapter(chapter.id)}
                             />
                           ))}
                         </div>
@@ -493,21 +514,15 @@ export function MangaDetail({ manga, chapters }: MangaDetailProps) {
       </div>
       </div>
 
-      {showReader && (
-        <Reader
-          manga={manga}
-          chapter={loadedChapter || chapters.find(c => c.id === startChapter) || chapters[0]}
-          chapters={chapters}
-          onChapterChange={(id) => setStartChapter(id)}
-          onClose={() => setShowReader(false)}
-        />
-      )}
- 
       {/* Sticky Bottom CTA for Mobile */}
       <div className="fixed bottom-0 left-0 right-0 z-30 p-4 bg-background/95 backdrop-blur border-t border-border flex items-center gap-3 sm:hidden">
         <Button
           className="flex-1 gap-2"
-          onClick={() => { setStartChapter(chapters[0]?.id); setShowReader(true); }}
+          onClick={() => {
+            if (chapters[0]?.id) {
+              openChapter(chapters[0].id);
+            }
+          }}
         >
           <BookOpen className="h-5 w-5" />
           Read Now

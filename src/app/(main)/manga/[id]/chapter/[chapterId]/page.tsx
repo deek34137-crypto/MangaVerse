@@ -1,12 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { Reader } from "@/components/reader/reader";
-
-interface ChapterPageProps {
-  params: Promise<{ id: string; chapterId: string }>;
-}
-
+import { ChapterReaderWrapper } from "@/components/reader/ChapterReaderWrapper";
 import { getMangaDetail, getChapterDetail, getChaptersDetail } from "@/services/manga";
 
 interface ChapterPageProps {
@@ -50,7 +45,6 @@ export default async function ChapterPage({ params }: ChapterPageProps) {
   const t0 = performance.now();
 
   console.log(`[ChapterPage] Server fetching details for manga ${id}, chapter ${chapterId}...`);
-  // Load sequentially to prevent concurrent MangaDex sync collisions
   const manga = await getMangaDetail(id);
   
   if (!manga) {
@@ -71,16 +65,10 @@ export default async function ChapterPage({ params }: ChapterPageProps) {
     <div className="min-h-screen">
       <Header />
       <main className="flex-1">
-        <Reader
+        <ChapterReaderWrapper
           manga={manga}
           chapter={chapter}
           chapters={chapters}
-          onChapterChange={(chapterId) => {
-            window.location.href = `/manga/${id}/chapter/${chapterId}`;
-          }}
-          onClose={() => {
-            window.location.href = `/manga/${id}`;
-          }}
         />
       </main>
     </div>
