@@ -53,7 +53,7 @@ export function BulkActionBar({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ duration: 0.28, ease: [0, 0, 0.2, 1] }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[var(--z-toast)] w-full max-w-xl px-4"
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[var(--z-toast)] w-full max-w-xl px-4"
           role="toolbar"
           aria-label="Bulk selection actions"
         >

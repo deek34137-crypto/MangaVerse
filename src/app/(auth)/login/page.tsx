@@ -277,6 +277,8 @@ function LoginContent() {
                   <Input
                     id="email"
                     type="email"
+                    inputMode="email"
+                    autoCapitalize="none"
                     placeholder="you@example.com"
                     value={formData.email}
                     onChange={(e) => setFormData((d) => ({ ...d, email: e.target.value }))}

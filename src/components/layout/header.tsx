@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { ClientOnly } from "@/components/ui/ClientOnly";
 
+import { MobileSearchOverlay } from "@/components/search/MobileSearchOverlay";
+
 /* ── Nav items ───────────────────────────────────────────────────────────── */
 const navItems = [
   { name: "Home",            href: "/" },
@@ -84,14 +86,29 @@ function MobileNavItem({ href, name, pathname, onClick }: {
 /* ── Main Header ─────────────────────────────────────────────────────────── */
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const lastScrollY = useRef(0);
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  // Scroll-aware glass effect
+  // Scroll-aware glass effect and hide-on-scroll down
   useEffect(() => {
-    const handle = () => setScrolled(window.scrollY > 20);
+    const handle = () => {
+      const currentScrollY = window.scrollY;
+      setScrolled(currentScrollY > 20);
+
+      // Auto-hide mobile header when scrolling down past 80px, show when scrolling up
+      if (currentScrollY > 80 && currentScrollY > lastScrollY.current + 10) {
+        setHidden(true);
+      } else if (currentScrollY < lastScrollY.current - 10 || currentScrollY <= 80) {
+        setHidden(false);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+
     window.addEventListener("scroll", handle, { passive: true });
     return () => window.removeEventListener("scroll", handle);
   }, []);
@@ -124,7 +141,8 @@ export function Header() {
     <>
       <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-280 ease-standard",
+          "fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out pt-safe",
+          hidden ? "-translate-y-full" : "translate-y-0",
           scrolled
             ? "glass-nav shadow-lg"
             : "bg-transparent border-b border-transparent"
@@ -342,6 +360,16 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
+              {/* Mobile search button */}
+              <button
+                type="button"
+                className="md:hidden h-9 w-9 rounded-full flex items-center justify-center text-ink-200 hover:text-ink-50 hover:bg-ink-800/80 transition-all border border-transparent hover:border-ink-700 cursor-pointer touch-target"
+                onClick={() => setMobileSearchOpen(true)}
+                aria-label="Open mobile search"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+
               {/* Mobile hamburger */}
               <motion.button
                 className="md:hidden h-9 w-9 rounded-full flex items-center justify-center text-ink-200 hover:text-ink-50 hover:bg-ink-800/80 transition-all ml-1 border border-transparent hover:border-ink-700 cursor-pointer"
@@ -427,6 +455,12 @@ export function Header() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile Search Overlay */}
+      <MobileSearchOverlay
+        isOpen={mobileSearchOpen}
+        onClose={() => setMobileSearchOpen(false)}
+      />
     </>
   );
 }

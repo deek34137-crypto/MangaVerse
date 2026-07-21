@@ -742,3 +742,51 @@ body::before {
   transform-style: preserve-3d;
   perspective: 1000px;
 }
+
+/* ─── Mobile Touch & Safe-Area Design Tokens ───────────────────────────────── */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+.pb-safe {
+  padding-bottom: calc(0.75rem + var(--sab));
+}
+
+.pt-safe {
+  padding-top: calc(0.75rem + var(--sat));
+}
+
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+.momentum-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.select-none-touch {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.active-press {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.active-press:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}

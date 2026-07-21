@@ -1,30 +1,41 @@
-// A self-cleaning service worker that unregisters any active service workers on localhost in development mode.
-// In production, it does nothing (acts as a no-op) to avoid browser overhead.
+// MangaHub Production PWA Service Worker
+const CACHE_NAME = "mangahub-shell-v1";
+const OFFLINE_URL = "/offline";
 
-self.addEventListener("install", () => {
+const PRECACHE_ASSETS = [
+  "/offline",
+  "/favicon.ico",
+  "/site.webmanifest",
+  "/android-chrome-192x192.png",
+  "/apple-touch-icon.png"
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(PRECACHE_ASSETS);
+    })
+  );
   self.skipWaiting();
 });
 
-self.addEventListener("activate", () => {
-  const isDev = self.location.hostname === "localhost" || 
-                self.location.hostname === "127.0.0.1" || 
-                self.location.hostname.endsWith(".local");
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
+});
 
-  if (isDev) {
-    console.log("[Service Worker] Development environment detected. Unregistering self to clean browser cache...");
-    self.registration.unregister()
-      .then(() => self.clients.matchAll())
-      .then((clients) => {
-        clients.forEach((client) => {
-          if (client.url) {
-            client.navigate(client.url);
-          }
-        });
+self.addEventListener("fetch", (event) => {
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(OFFLINE_URL) || caches.match("/");
       })
-      .catch((err) => {
-        console.error("[Service Worker] Failed to unregister:", err);
-      });
-  } else {
-    console.log("[Service Worker] Production environment detected. Active but no-op.");
+    );
   }
 });

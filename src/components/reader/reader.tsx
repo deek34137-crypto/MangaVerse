@@ -68,6 +68,8 @@ function ShortcutRow({ keys, desc }: { keys: string[]; desc: string }) {
   );
 }
  
+import { PerformanceOverlay } from "./engine/PerformanceOverlay";
+
 export function Reader({
   manga,
   chapter,
@@ -799,6 +801,7 @@ export function Reader({
           )}
         </div>
 
+        <PerformanceOverlay />
       </TooltipProvider>
     </div>
   );
@@ -813,6 +816,9 @@ function SettingGroup({ title, children }: { title: string; children: React.Reac
   );
 }
 
+import { useCapabilityTier } from "@/hooks/useCapabilityTier";
+import { readerStorage } from "@/lib/reader-storage";
+
 function VerticalReaderView({
   chapter,
   settings,
@@ -826,27 +832,56 @@ function VerticalReaderView({
   currentPage: number;
   setCurrentPage: (page: number) => void;
 }) {
+  const { evictionWindowSize } = useCapabilityTier();
+
   const handlePageEnter = (pageNum: number) => {
     if (settings.showPageNumbers && Math.abs(pageNum - currentPage) < 2) {
       setCurrentPage(pageNum);
+      // Auto-save session
+      readerStorage.saveSession({
+        mangaId: chapter.mangaId || "",
+        chapterId: chapter.id,
+        pageNumber: pageNum,
+        zoomScale: zoom / 100,
+        scrollOffset: window.scrollY || 0,
+        readingMode: settings.mode,
+        updatedAt: Date.now(),
+      });
     }
   };
 
   return (
     <div className="reader-vertical reader-container max-w-4xl mx-auto px-4 py-8">
       <div className="space-y-6" role="list" aria-label="Manga pages">
-        {chapter.pages.map((page, index) => (
-          <ReaderPage
-            key={page.id}
-            page={page}
-            index={index}
-            zoom={zoom}
-            settings={settings}
-            isCurrent={index + 1 === currentPage}
-            onEnter={() => handlePageEnter(index + 1)}
-            currentPage={currentPage}
-          />
-        ))}
+        {chapter.pages.map((page, index) => {
+          const pageNum = index + 1;
+          const isVisible = Math.abs(pageNum - currentPage) <= evictionWindowSize;
+
+          if (!isVisible) {
+            // Placeholder element for offscreen pages to keep DOM node count < 50
+            return (
+              <div
+                key={page.id}
+                className="w-full h-[600px] bg-ink-900/30 rounded-lg flex items-center justify-center text-xs text-muted-foreground"
+              >
+                Page {pageNum} (offscreen)
+              </div>
+            );
+          }
+
+          return (
+            <ReaderPage
+              key={page.id}
+              page={page}
+              index={index}
+              zoom={zoom}
+              settings={settings}
+              isCurrent={pageNum === currentPage}
+              onEnter={() => handlePageEnter(pageNum)}
+              currentPage={currentPage}
+            />
+          );
+        })}
       </div>
     </div>
   );

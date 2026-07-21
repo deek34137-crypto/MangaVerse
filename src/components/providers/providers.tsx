@@ -7,6 +7,8 @@ import { ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { PageTransition } from "@/components/ui/PageTransition";
 import { MotionConfig } from "framer-motion";
+import { BottomNav } from "@/components/layout/BottomNav";
+import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -28,6 +30,8 @@ export function Providers({ children }: ProvidersProps) {
             {children}
           </PageTransition>
         </MotionConfig>
+        <BottomNav />
+        <InstallPromptBanner />
         <Toaster />
       </ThemeProvider>
     </SessionProvider>
