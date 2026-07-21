@@ -142,7 +142,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
 
   return (
     <section
-      className={cn("relative h-[80vh] min-h-[600px] max-h-[850px] overflow-hidden bg-background select-none", className)}
+      className={cn("relative min-h-[420px] sm:min-h-[500px] lg:h-[80vh] lg:min-h-[600px] max-h-[850px] overflow-hidden bg-background select-none py-6 lg:py-0", className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onKeyDown={handleKey}

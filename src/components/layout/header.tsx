@@ -199,7 +199,7 @@ export function Header() {
             </nav>
 
             {/* ── Right actions ── */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-3 sm:gap-4">
 
               {/* Search Trigger Mock Input */}
               <TooltipProvider delayDuration={200}>

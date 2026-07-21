@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, X, Smartphone, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,17 @@ import { ClientOnly } from "@/components/ui/ClientOnly";
 export function InstallPromptBanner() {
   const { isInstallable, isInstalled, installPWA } = usePWAInstall();
   const [dismissed, setDismissed] = useState(false);
+  const [showDelay, setShowDelay] = useState(false);
+  const pathname = usePathname();
 
-  if (!isInstallable || isInstalled || dismissed) {
+  // Show banner after 30s delay to prevent immediate content overlap
+  useEffect(() => {
+    const timer = setTimeout(() => setShowDelay(true), 30000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Do not show inside reader route or before delay
+  if (!isInstallable || isInstalled || dismissed || !showDelay || pathname.includes("/chapter/")) {
     return null;
   }
 
@@ -22,7 +32,7 @@ export function InstallPromptBanner() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 50 }}
-          className="fixed bottom-20 left-4 right-4 z-40 md:left-auto md:right-6 md:w-96 p-4 rounded-2xl bg-ink-900/95 border border-primary/30 backdrop-blur-xl shadow-2xl"
+          className="fixed bottom-24 left-4 right-4 z-40 md:left-auto md:right-6 md:w-96 p-4 rounded-2xl bg-ink-900/95 border border-primary/30 backdrop-blur-xl shadow-2xl"
         >
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
