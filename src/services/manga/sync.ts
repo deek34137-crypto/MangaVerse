@@ -113,53 +113,49 @@ export async function ensureProviderLinks(mangaId: string): Promise<any[]> {
   const existingLinks = await db.select().from(mangaProviderTable).where(eq(mangaProviderTable.mangaId, mangaId));
   if (existingLinks.length > 0) return existingLinks;
 
-  console.warn(`[SyncEngine] Manga ${mangaId} has 0 linked providers. Attempting confidence-scored auto-link...`);
+  console.warn(`[SyncEngine] Manga ${mangaId} has 0 linked providers. Attempting multi-provider auto-link...`);
   const canonical = await mangaRepo.findById(mangaId);
   if (!canonical?.title) return [];
 
   const aliases = await mangaRepo.getAliases(mangaId);
+  const providersToTry = ["mangadex", "weebcentral", "mangakatana", "comick", "webtoon"];
 
-  try {
-    const providerName = "mangadex";
-    const provider = providerRegistry.get(providerName);
-    const searchResults = await provider.searchManga(canonical.title, { limit: 3 });
+  let overallBestCandidate: any = null;
+  let overallBestProvider = "";
+  let overallBestScore = 0;
 
-    let bestCandidate: any = null;
-    let bestScore = 0;
+  for (const providerName of providersToTry) {
+    try {
+      const provider = providerRegistry.get(providerName);
+      const searchResults = await provider.searchManga(canonical.title, { limit: 3 });
 
-    for (const candidate of searchResults) {
-      const score = ConfidenceScorer.calculateConfidence(canonical, candidate, providerName, aliases);
-      if (score > bestScore) {
-        bestScore = score;
-        bestCandidate = candidate;
+      for (const candidate of searchResults) {
+        const score = ConfidenceScorer.calculateConfidence(canonical, candidate, providerName, aliases);
+        if (score > overallBestScore) {
+          overallBestScore = score;
+          overallBestCandidate = candidate;
+          overallBestProvider = providerName;
+        }
       }
+      if (overallBestScore >= 0.85) break;
+    } catch (err) {
+      console.warn(`[SyncEngine] ensureProviderLinks search failed for provider ${providerName}:`, err);
     }
+  }
 
-    // High confidence threshold (>= 0.85) to prevent incorrect auto-linking
-    if (bestCandidate && bestScore >= 0.85) {
-      console.log(
-        `[SyncEngine] High-confidence auto-link for Manga ${mangaId} ("${canonical.title}") ` +
-        `to ${providerName} ID ${bestCandidate.id} (confidence: ${bestScore.toFixed(2)})`
-      );
-      await providerRepo.linkManga(
-        mangaId,
-        providerName,
-        bestCandidate.id,
-        bestCandidate.coverImage || undefined,
-        bestCandidate.rawMetadata
-      );
-      return await db.select().from(mangaProviderTable).where(eq(mangaProviderTable.mangaId, mangaId));
-    } else if (bestCandidate && bestScore >= 0.50) {
-      console.warn(
-        `[SyncEngine] Medium-confidence candidate found for ${mangaId} (${bestScore.toFixed(2)}), ` +
-        `queueing match review instead of auto-linking.`
-      );
-      await reviewRepo.savePendingReview(providerName, bestCandidate.id, mangaId, bestScore);
-    } else {
-      console.warn(`[SyncEngine] No candidate met confidence threshold for Manga ${mangaId}.`);
-    }
-  } catch (err) {
-    console.error(`[SyncEngine] ensureProviderLinks failed for ${mangaId}:`, err);
+  if (overallBestCandidate) {
+    console.log(
+      `[SyncEngine] Auto-linking Manga ${mangaId} ("${canonical.title}") ` +
+      `to ${overallBestProvider} ID ${overallBestCandidate.id} (confidence: ${overallBestScore.toFixed(2)})`
+    );
+    await providerRepo.linkManga(
+      mangaId,
+      overallBestProvider,
+      overallBestCandidate.id,
+      overallBestCandidate.coverImage || undefined,
+      overallBestCandidate.rawMetadata
+    );
+    return await db.select().from(mangaProviderTable).where(eq(mangaProviderTable.mangaId, mangaId));
   }
 
   return [];
