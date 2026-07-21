@@ -16,26 +16,76 @@ interface CachedFetch {
 const activeFetches = new Map<string, Promise<CachedFetch>>();
 
 const ALLOWED_HOSTS = [
+  // MangaDex & MangaDex @at-home nodes
   "uploads.mangadex.org",
   "mangadex.org",
+  "mangadex.network",
+  "cmdgd.org",
+
+  // ComicK
   "comick.app",
   "comick.cc",
   "comick.fun",
   "comick.io",
+  "comick.pictures",
+
+  // MangaSee & MangaLife
   "mangasee123.com",
   "mangalifeus.com",
+
+  // MangaNato & ChapMangaNato
   "manganato.com",
   "chapmanganato.to",
+  "chapmanganato.com",
+  "chapmanganato.org",
+  "manganato.info",
+
   // MangaKatana
   "mangakatana.com",
+
   // WeebCentral CDN targets
   "weebcentral.com",
   "planeptune.us",
   "compsci88.com",
-  // WEBTOON CDN — explicit hostnames (not *.pstatic.net wildcard, safer for SSRF scope)
-  "webtoon-phinf.pstatic.net",    // episode page images and thumbnails
-  "webtoons-static.pstatic.net",  // static assets (placeholder filtered in parser)
+
+  // WEBTOON CDN
+  "pstatic.net",
+  "webtoon-phinf.pstatic.net",
+  "webtoons-static.pstatic.net",
+  "webtoons.com",
+
+  // Common CDN proxies & image hosts
+  "wp.com",
+  "blogspot.com",
+  "bp.blogspot.com",
+  "cloudinary.com",
+  "imgur.com",
+  "catbox.moe",
+  "cubari.moe",
 ];
+
+function getRefererForHost(hostname: string, protocol: string): string {
+  const lowerHost = hostname.toLowerCase();
+  if (lowerHost.endsWith("pstatic.net") || lowerHost.endsWith("webtoons.com")) {
+    return "https://www.webtoons.com/";
+  }
+  if (lowerHost.endsWith("comick.pictures") || lowerHost.endsWith("comick.io") || lowerHost.endsWith("comick.app") || lowerHost.endsWith("comick.cc") || lowerHost.endsWith("comick.fun")) {
+    return "https://comick.io/";
+  }
+  if (lowerHost.endsWith("mangadex.org") || lowerHost.endsWith("cmdgd.org") || lowerHost.endsWith("mangadex.network")) {
+    return "https://mangadex.org/";
+  }
+  if (lowerHost.endsWith("mangakatana.com")) {
+    return "https://mangakatana.com/";
+  }
+  if (lowerHost.endsWith("weebcentral.com") || lowerHost.endsWith("planeptune.us") || lowerHost.endsWith("compsci88.com")) {
+    return "https://weebcentral.com/";
+  }
+  if (lowerHost.endsWith("manganato.com") || lowerHost.endsWith("chapmanganato.to") || lowerHost.endsWith("chapmanganato.com")) {
+    return "https://chapmanganato.to/";
+  }
+  return `${protocol}//${hostname}/`;
+}
 
 function isPrivateIp(ip: string): boolean {
   if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") return true;
@@ -138,15 +188,16 @@ export async function GET(request: NextRequest) {
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+        const referer = getRefererForHost(hostname, parsed.protocol);
 
         const res = await fetch(currentUrl, {
           signal: controller.signal,
           redirect: "manual",
           headers: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            // Use the image's own origin as Referer to satisfy hotlink protection
-            "Referer": `${parsed.protocol}//${parsed.hostname}/`,
+            "Referer": referer,
             "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
           },
         });
@@ -167,7 +218,6 @@ export async function GET(request: NextRequest) {
       }
 
       if (!responseData || !responseData.ok) {
-        // Detailed upstream error logging for diagnosis
         let upstreamBody = "(unreadable)";
         try { upstreamBody = (await responseData?.text() ?? "").slice(0, 500); } catch {}
         console.error("[Proxy] Upstream request failed:", {
@@ -252,8 +302,6 @@ export async function GET(request: NextRequest) {
       return new NextResponse(error.message, { status: 415 });
     }
     console.error("Proxy error:", error.message, `(elapsedMs: ${(performance.now() - startTime).toFixed(1)})`);
-    // Return placeholder image (200 + bytes) instead of 500 to prevent broken images
-    // and layout shifts on the homepage.
     try {
       const placeholderPath = path.join(process.cwd(), "public", "images", "cover-placeholder.jpg");
       const placeholderBytes = await fs.readFile(placeholderPath);
@@ -271,4 +319,3 @@ export async function GET(request: NextRequest) {
     }
   }
 }
-
