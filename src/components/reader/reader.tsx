@@ -929,6 +929,7 @@ function VerticalReaderView({
               isCurrent={pageNum === currentPage}
               onEnter={() => handlePageEnter(pageNum)}
               currentPage={currentPage}
+              totalPages={chapter.pages.length}
             />
           );
         })}
@@ -964,6 +965,7 @@ function HorizontalReaderView({
               isCurrent={index + 1 === currentPage}
               isHorizontal={true}
               currentPage={currentPage}
+              totalPages={chapter.pages.length}
             />
           ))}
         </div>
@@ -983,6 +985,7 @@ function ReaderPage({
   isHorizontal = false,
   onEnter,
   currentPage,
+  totalPages,
 }: {
   page: Chapter["pages"][0];
   index: number;
@@ -992,6 +995,7 @@ function ReaderPage({
   isHorizontal?: boolean;
   onEnter?: () => void;
   currentPage: number;
+  totalPages: number;
 }) {
   const [srcUrl, setSrcUrl] = useState<string>("");
   const [imageState, setImageState] = useState<"loading" | "loaded" | "error">("loading");
@@ -1119,7 +1123,7 @@ function ReaderPage({
           "absolute bottom-2 right-2 text-xs px-2 py-1 rounded bg-background/80 backdrop-blur",
           isCurrent ? "text-primary font-medium" : "text-muted-foreground"
         )}>
-          Page {page.number} / {page.number}
+          Page {page.number} / {totalPages}
         </div>
       )}
     </div>
