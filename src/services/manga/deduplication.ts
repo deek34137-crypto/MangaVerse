@@ -38,6 +38,16 @@ export function calculateSimilarity(a: string, b: string): number {
   const normA = normalizeTitle(a);
   const normB = normalizeTitle(b);
   if (normA === normB) return 1.0;
+
+  // Prefix matching boost (e.g. "Solo Leveling" vs "Solo Leveling Digital")
+  if (normA.startsWith(normB) || normB.startsWith(normA)) {
+    const minLen = Math.min(normA.length, normB.length);
+    const maxLen = Math.max(normA.length, normB.length);
+    if (minLen >= 5 && minLen / maxLen >= 0.5) {
+      return Math.max(0.8, minLen / maxLen);
+    }
+  }
+
   const maxLen = Math.max(normA.length, normB.length);
   if (maxLen === 0) return 1.0;
   const dist = levenshteinDistance(normA, normB);

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { logger } from "@/lib/observability";
 
 /* ─── OAuth Provider Configs ─────────────────────────────────────────────── */
 const oauthProviders = [
@@ -138,13 +139,16 @@ function LoginContent() {
         redirect: false,
       });
       if (result?.error) {
+        logger.warn("Login attempt failed", { email: formData.email, error: result.error }, "AUTH");
         toast({ title: "Login Failed", description: "Invalid email or password.", variant: "destructive" });
       } else {
+        logger.info("User login successful", { email: formData.email, callbackUrl }, "AUTH");
         toast({ title: "Welcome Back! 🎉", description: "You have been successfully logged in." });
         router.push(callbackUrl);
         router.refresh();
       }
-    } catch {
+    } catch (err) {
+      logger.error("Unexpected error during login", { error: err }, "AUTH");
       toast({ title: "Error", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);

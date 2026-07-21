@@ -12,7 +12,8 @@ export function PerformanceOverlay() {
     heapUsedMB: 0,
     droppedFrames: 0,
     avgDecodeTimeMs: 0,
-    longTaskCount: 0,
+    cacheHitRatio: 100,
+    queueLatencyMs: 0,
   });
 
   const network = useNetworkPolicy();

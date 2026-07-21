@@ -497,16 +497,25 @@ export function MangaDetail({ manga, chapters }: MangaDetailProps) {
               </TabsContent>
  
               <TabsContent value="related" className="mt-6">
-                <MangaCarousel
-                  title="Related Recommendations"
-                  items={[
-                    { id: "jjk", title: "Jujutsu Kaisen", coverImage: "https://cdn.myanimelist.net/images/manga/3/210341.jpg", rating: 8.7, status: "ongoing", type: "manga" } as any,
-                    { id: "bl", title: "Blue Lock", coverImage: "https://cdn.myanimelist.net/images/manga/5/290006.jpg", rating: 8.2, status: "ongoing", type: "manga" } as any,
-                    { id: "berserk", title: "Berserk", coverImage: "https://cdn.myanimelist.net/images/manga/1/157897.jpg", rating: 9.5, status: "ongoing", type: "manga" } as any,
-                    { id: "csm", title: "Chainsaw Man", coverImage: "https://cdn.myanimelist.net/images/manga/3/216464.jpg", rating: 9.0, status: "ongoing", type: "manga" } as any,
-                  ]}
-                  showFade
-                />
+                {manga.relations && manga.relations.length > 0 ? (
+                  <MangaCarousel
+                    title="Related Series & Adaptations"
+                    items={manga.relations.map((rel) => ({
+                      id: rel.id,
+                      title: rel.title,
+                      coverImage: rel.coverImage || "/placeholder-manga.jpg",
+                      rating: rel.rating || 8.0,
+                      status: rel.status || "ongoing",
+                      type: rel.type || "manga",
+                    })) as any}
+                    showFade
+                  />
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground">
+                    <BookOpen className="h-10 w-10 mx-auto opacity-40 mb-3" />
+                    <p className="font-medium text-sm">No related series or adaptations found</p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>

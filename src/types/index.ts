@@ -24,6 +24,17 @@ export interface Manga {
   createdAt: string;
   updatedAt: string;
   userData?: UserMangaData;
+  relations?: MangaRelation[];
+}
+
+export interface MangaRelation {
+  id: string;
+  relationType: string;
+  title: string;
+  coverImage?: string;
+  type?: string;
+  status?: string;
+  rating?: number;
 }
 
 export interface Chapter {

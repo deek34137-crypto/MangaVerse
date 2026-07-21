@@ -5,7 +5,7 @@
 
 // ── Event Category Definitions ──────────────────────────────────────────────
 
-export type ReaderCategoryEvent = "READER_PAGE_CHANGED" | "READER_ZOOM_CHANGED" | "READER_MODE_CHANGED";
+export type ReaderCategoryEvent = "READER_PAGE_CHANGED" | "READER_ZOOM_CHANGED" | "READER_MODE_CHANGED" | "READER_STATE_CHANGED";
 export type StorageCategoryEvent = "STORAGE_SESSION_RESTORED" | "STORAGE_QUOTA_WARNING";
 export type DownloadCategoryEvent = "DOWNLOAD_QUEUED" | "DOWNLOAD_COMPLETED" | "DOWNLOAD_FAILED";
 export type SystemCategoryEvent = "SYSTEM_NETWORK_CHANGED" | "SYSTEM_BATTERY_CHANGED" | "SYSTEM_THERMAL_WARNING";
@@ -24,6 +24,7 @@ export interface CategorizedEventPayloads {
   READER_PAGE_CHANGED: { pageNumber: number; totalPages: number };
   READER_ZOOM_CHANGED: { zoomScale: number };
   READER_MODE_CHANGED: { mode: string };
+  READER_STATE_CHANGED: { from: string; to: string; timestamp: number };
   STORAGE_SESSION_RESTORED: { pageNumber: number; zoomScale: number };
   STORAGE_QUOTA_WARNING: { percentageUsed: number };
   DOWNLOAD_QUEUED: { chapterId: string };

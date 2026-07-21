@@ -1,46 +1,80 @@
 /**
- * Reader Engine v2 Memory Manager & Eviction Policy
- *
- * DETERMINISTIC EVICTION POLICY:
- * 1. Distance > Buffer Window
- * 2. Least Recently Viewed (LRU) timestamp
- * 3. Not Bookmarked / Saved
- * 4. Not Active Viewport Node
+ * Reader Engine Centralized Memory Cache & Disposer
+ * 
+ * Manages active bitmap memory lifetimes (`±3 pages` window) to trigger
+ * browser garbage collection and prevent RAM leaks during long reading sessions.
  */
 
-export interface EvictionCandidate {
+export interface CachedImageRecord {
+  url: string;
   pageIndex: number;
-  lastViewedAt: number;
-  isBookmarked: boolean;
-  isActive: boolean;
+  image: HTMLImageElement | ImageBitmap;
+  lastAccessed: number;
 }
 
 export class MemoryManager {
-  public computeEvictionBounds(currentPage: number, bufferSize: number, totalPages: number): { min: number; max: number } {
-    return {
-      min: Math.max(1, currentPage - bufferSize),
-      max: Math.min(totalPages, currentPage + bufferSize),
-    };
+  private cache = new Map<string, CachedImageRecord>();
+  private activeBufferWindow = 3; // ±3 pages window
+
+  public cacheBitmap(url: string, pageIndex: number, image: HTMLImageElement | ImageBitmap): void {
+    this.cache.set(url, {
+      url,
+      pageIndex,
+      image,
+      lastAccessed: Date.now(),
+    });
   }
 
-  /**
-   * Deterministic Eviction Evaluation
-   */
-  public evaluateEviction(candidate: EvictionCandidate, currentPage: number, bufferSize: number): boolean {
-    // 1. Rule 1: Never evict currently active page
-    if (candidate.isActive) return false;
-
-    // 2. Rule 2: Evict if outside distance buffer
-    const distance = Math.abs(candidate.pageIndex - currentPage);
-    if (distance > bufferSize) {
-      // 3. Rule 3: Preserve bookmarked pages unless buffer is critically exceeded
-      if (candidate.isBookmarked && distance <= bufferSize * 2) {
-        return false;
-      }
-      return true;
+  public getCachedBitmap(url: string): HTMLImageElement | ImageBitmap | undefined {
+    const record = this.cache.get(url);
+    if (record) {
+      record.lastAccessed = Date.now();
+      return record.image;
     }
+    return undefined;
+  }
 
-    return false;
+  public evaluateEviction(candidate: { pageIndex: number; isActive: boolean; isBookmarked?: boolean; lastViewedAt?: number }, currentPage: number, bufferSize: number): boolean {
+    if (candidate.isActive) return false;
+    const distance = Math.abs(candidate.pageIndex - currentPage);
+    return distance > bufferSize;
+  }
+
+  public pruneInactiveBitmaps(currentPageIndex: number, customBuffer?: number): void {
+    const buffer = customBuffer ?? this.activeBufferWindow;
+
+    for (const [url, record] of this.cache.entries()) {
+      const distance = Math.abs(record.pageIndex - currentPageIndex);
+
+      if (distance > buffer) {
+        // Close ImageBitmap if supported to release GPU/RAM memory immediately
+        if ("close" in record.image && typeof record.image.close === "function") {
+          try {
+            record.image.close();
+          } catch {
+            // Ignore close errors
+          }
+        }
+        this.cache.delete(url);
+      }
+    }
+  }
+
+  public clearAll(): void {
+    for (const record of this.cache.values()) {
+      if ("close" in record.image && typeof record.image.close === "function") {
+        try {
+          record.image.close();
+        } catch {
+          // Ignore
+        }
+      }
+    }
+    this.cache.clear();
+  }
+
+  public getCacheSize(): number {
+    return this.cache.size;
   }
 }
 

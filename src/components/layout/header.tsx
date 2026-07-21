@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu, X, Sun, Moon, BookOpen, Heart, History,
-  Settings, LogOut, User, Bell, Search, ChevronDown, Command,
+  Settings, LogOut, User, Bell, Search, ChevronDown, LogIn, UserPlus
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -17,9 +16,11 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
+import { useSession, signOut } from "next-auth/react";
 import { ClientOnly } from "@/components/ui/ClientOnly";
-
 import { MobileSearchOverlay } from "@/components/search/MobileSearchOverlay";
+import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/observability";
 
 /* ── Nav items ───────────────────────────────────────────────────────────── */
 const navItems = [
@@ -93,6 +94,8 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { data: session, status } = useSession();
+  const { toast } = useToast();
 
   // Scroll-aware glass effect and hide-on-scroll down
   useEffect(() => {
@@ -113,7 +116,7 @@ export function Header() {
     return () => window.removeEventListener("scroll", handle);
   }, []);
 
-  // Close mobile menu on route change (render-phase state update)
+  // Close mobile menu on route change
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
@@ -136,6 +139,27 @@ export function Header() {
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  // Sign out handler with logging & error toast
+  const handleSignOut = async () => {
+    try {
+      logger.info("User initiated sign-out", { userId: session?.user?.id }, "AUTH");
+      await signOut({ callbackUrl: "/" });
+    } catch (error) {
+      logger.error("Sign-out error occurred", { error }, "AUTH");
+      toast({
+        title: "Unable to sign out",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Avatar values & fallback hierarchy
+  const avatarSrc = session?.user?.image || session?.user?.avatar || undefined;
+  const displayName = session?.user?.displayName || session?.user?.name || session?.user?.username || "User";
+  const displayEmail = session?.user?.email || (session?.user?.username ? `@${session.user.username}` : "");
+  const fallbackChar = (displayName || "U").charAt(0).toUpperCase();
 
   return (
     <>
@@ -261,104 +285,151 @@ export function Header() {
                 </TooltipProvider>
               </ClientOnly>
 
-              {/* Notifications Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <motion.button
-                    className="relative h-9 w-9 rounded-full flex items-center justify-center text-ink-200 hover:text-ink-50 hover:bg-ink-800/80 transition-all border border-transparent hover:border-ink-700 cursor-pointer"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    aria-label="Notifications (3 unread)"
-                  >
-                    <Bell className="h-4 w-4" />
-                    <NotifBadge count={3} />
-                  </motion.button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 bg-popover border border-ink-700 shadow-dropdown mt-2 rounded-xl p-1" sideOffset={8}>
-                  <DropdownMenuLabel className="font-semibold text-sm px-3 py-2 text-foreground">
-                    Notifications
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <div className="max-h-64 overflow-y-auto">
-                    {[
-                      { id: "1", title: "New Chapter Available", message: "Solo Leveling Chapter 120 has been updated.", time: "2 hours ago", read: false },
-                      { id: "2", title: "Manga Recommendation", message: "Based on your library, check out Chainsaw Man.", time: "1 day ago", read: false },
-                      { id: "3", title: "Welcome to MangaHub!", message: "Enjoy the premium cinematic manga experience.", time: "3 days ago", read: true }
-                    ].map((notif) => (
-                      <DropdownMenuItem key={notif.id} className="flex flex-col items-start gap-0.5 p-3 cursor-pointer border-b border-ink-800/40 last:border-0 hover:bg-ink-800/60 focus:bg-ink-800/60 rounded-lg">
-                        <div className="flex items-center gap-2 w-full">
-                          <span className={cn("font-semibold text-xs text-foreground", !notif.read && "text-primary")}>{notif.title}</span>
-                          {!notif.read && <span className="h-1.5 w-1.5 rounded-full bg-primary ml-auto" />}
-                        </div>
-                        <p className="text-[11px] text-ink-400 leading-normal line-clamp-2 mt-1">{notif.message}</p>
-                        <span className="text-[9px] text-ink-400/50 mt-1.5">{notif.time}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="w-full text-center text-[11px] font-semibold text-primary hover:text-primary-hover focus:text-primary py-2 cursor-pointer flex justify-center hover:bg-transparent focus:bg-transparent">
-                    Mark all as read
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Notifications Dropdown (Shown for logged in users) */}
+              {session?.user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <motion.button
+                      className="relative h-9 w-9 rounded-full flex items-center justify-center text-ink-200 hover:text-ink-50 hover:bg-ink-800/80 transition-all border border-transparent hover:border-ink-700 cursor-pointer"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      aria-label="Notifications"
+                    >
+                      <Bell className="h-4 w-4" />
+                      <NotifBadge count={3} />
+                    </motion.button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80 bg-popover border border-ink-700 shadow-dropdown mt-2 rounded-xl p-1" sideOffset={8}>
+                    <DropdownMenuLabel className="font-semibold text-sm px-3 py-2 text-foreground">
+                      Notifications
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <div className="max-h-64 overflow-y-auto">
+                      {[
+                        { id: "1", title: "New Chapter Available", message: "Solo Leveling Chapter 120 has been updated.", time: "2 hours ago", read: false },
+                        { id: "2", title: "Manga Recommendation", message: "Based on your library, check out Chainsaw Man.", time: "1 day ago", read: false },
+                        { id: "3", title: "Welcome to MangaHub!", message: "Enjoy the premium cinematic manga experience.", time: "3 days ago", read: true }
+                      ].map((notif) => (
+                        <DropdownMenuItem key={notif.id} className="flex flex-col items-start gap-0.5 p-3 cursor-pointer border-b border-ink-800/40 last:border-0 hover:bg-ink-800/60 focus:bg-ink-800/60 rounded-lg">
+                          <div className="flex items-center gap-2 w-full">
+                            <span className={cn("font-semibold text-xs text-foreground", !notif.read && "text-primary")}>{notif.title}</span>
+                            {!notif.read && <span className="h-1.5 w-1.5 rounded-full bg-primary ml-auto" />}
+                          </div>
+                          <p className="text-[11px] text-ink-400 leading-normal line-clamp-2 mt-1">{notif.message}</p>
+                          <span className="text-[9px] text-ink-400/50 mt-1.5">{notif.time}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="w-full text-center text-[11px] font-semibold text-primary hover:text-primary-hover focus:text-primary py-2 cursor-pointer flex justify-center hover:bg-transparent focus:bg-transparent">
+                      Mark all as read
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
               <div className="hidden sm:block w-px h-5 bg-ink-700/60 mx-1" />
 
-              {/* User menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <motion.button
-                    className="flex items-center gap-1.5 h-9 px-2 rounded-full hover:bg-ink-800/80 transition-all border border-transparent cursor-pointer"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    <Avatar className="h-7 w-7 border border-ink-700 shadow-sm">
-                      <AvatarFallback className="text-xs font-bold bg-ink-800 text-ink-50 border border-ink-700">
-                        U
-                      </AvatarFallback>
-                    </Avatar>
-                    <ChevronDown className="h-3.5 w-3.5 text-ink-400 hidden sm:block" />
-                  </motion.button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-popover border border-ink-700 shadow-dropdown mt-2 rounded-xl p-1" sideOffset={8}>
-                  <DropdownMenuLabel className="font-normal pb-3 p-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="text-sm font-bold bg-ink-800 text-ink-50 border border-ink-700">U</AvatarFallback>
+              {/* User / Profile menu */}
+              {status === "loading" ? (
+                <div className="h-8 w-8 rounded-full bg-ink-800/60 border border-ink-700/60 animate-pulse flex items-center justify-center">
+                  <User className="h-4 w-4 text-ink-400 opacity-40" />
+                </div>
+              ) : session?.user ? (
+                /* Authenticated User Menu */
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <motion.button
+                      className="flex items-center gap-1.5 h-9 px-2 rounded-full hover:bg-ink-800/80 transition-all border border-transparent cursor-pointer"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      aria-label="User account menu"
+                    >
+                      <Avatar className="h-7 w-7 border border-ink-700 shadow-sm">
+                        {avatarSrc && <AvatarImage src={avatarSrc} alt={displayName} />}
+                        <AvatarFallback className="text-xs font-bold bg-ink-800 text-ink-50 border border-ink-700">
+                          {fallbackChar}
+                        </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="text-sm font-semibold leading-none mb-1">Username</p>
-                        <p className="text-xs leading-none text-ink-400 mt-1">user@mangahub.com</p>
+                      <ChevronDown className="h-3.5 w-3.5 text-ink-400 hidden sm:block" />
+                    </motion.button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-popover border border-ink-700 shadow-dropdown mt-2 rounded-xl p-1" sideOffset={8}>
+                    <DropdownMenuLabel className="font-normal pb-3 p-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          {avatarSrc && <AvatarImage src={avatarSrc} alt={displayName} />}
+                          <AvatarFallback className="text-sm font-bold bg-ink-800 text-ink-50 border border-ink-700">
+                            {fallbackChar}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="overflow-hidden">
+                          <p className="text-sm font-semibold leading-none truncate mb-1">{displayName}</p>
+                          {displayEmail && <p className="text-xs leading-none text-ink-400 truncate mt-1">{displayEmail}</p>}
+                        </div>
                       </div>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {[
-                    { href: "/library",         icon: BookOpen, label: "My Library" },
-                    { href: "/history",          icon: History,  label: "Reading History" },
-                    { href: "/recommendations",  icon: Heart,    label: "Recommendations" },
-                  ].map(({ href, icon: Icon, label }) => (
-                    <DropdownMenuItem key={href} asChild>
-                      <Link href={href} className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer text-sm">
-                        <Icon className="h-4 w-4 text-ink-400" />
-                        {label}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {[
+                      { href: "/library",         icon: BookOpen, label: "My Library" },
+                      { href: "/history",          icon: History,  label: "Reading History" },
+                      { href: "/recommendations",  icon: Heart,    label: "Recommendations" },
+                    ].map(({ href, icon: Icon, label }) => (
+                      <DropdownMenuItem key={href} asChild>
+                        <Link href={href} className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer text-sm">
+                          <Icon className="h-4 w-4 text-ink-400" />
+                          {label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings" className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer text-sm">
+                        <Settings className="h-4 w-4 text-ink-400" />
+                        Settings
                       </Link>
                     </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer text-sm">
-                      <Settings className="h-4 w-4 text-ink-400" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10 p-2 rounded-lg cursor-pointer text-sm">
-                    <LogOut className="h-4 w-4 mr-2.5" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleSignOut}
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10 p-2 rounded-lg cursor-pointer text-sm"
+                    >
+                      <LogOut className="h-4 w-4 mr-2.5" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                /* Unauthenticated Menu — ONLY Sign In & Create Account */
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <motion.button
+                      className="flex items-center gap-1.5 h-9 px-3 rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 transition-all cursor-pointer font-medium text-xs"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      aria-label="Sign in menu"
+                    >
+                      <User className="h-4 w-4" />
+                      <span className="hidden sm:inline">Sign In</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-70 hidden sm:block" />
+                    </motion.button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 bg-popover border border-ink-700 shadow-dropdown mt-2 rounded-xl p-1" sideOffset={8}>
+                    <DropdownMenuItem asChild>
+                      <Link href="/login" className="flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer text-sm font-medium">
+                        <LogIn className="h-4 w-4 text-primary" />
+                        Sign In
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/register" className="flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer text-sm font-medium">
+                        <UserPlus className="h-4 w-4 text-primary" />
+                        Create Account
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
               {/* Mobile search button */}
               <button
@@ -434,23 +505,81 @@ export function Header() {
               ))}
             </nav>
 
-            {/* Theme toggle row */}
-            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-ink-700">
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full bg-ink-800 border border-ink-700 text-sm font-medium hover:bg-ink-700 text-ink-200 transition-colors cursor-pointer"
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
-              </button>
-              <Link
-                href="/settings"
-                onClick={() => setMobileOpen(false)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full bg-ink-800 border border-ink-700 text-sm font-medium hover:bg-ink-700 text-ink-200 transition-colors"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </Link>
+            {/* Auth status section in mobile menu */}
+            <div className="mt-4 pt-4 border-t border-ink-700 space-y-3">
+              {session?.user ? (
+                <>
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-ink-900/60 border border-ink-800/80">
+                    <Avatar className="h-9 w-9">
+                      {avatarSrc && <AvatarImage src={avatarSrc} alt={displayName} />}
+                      <AvatarFallback className="text-sm font-bold bg-ink-800 text-ink-50 border border-ink-700">
+                        {fallbackChar}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="overflow-hidden">
+                      <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                      {displayEmail && <p className="text-xs text-ink-400 truncate">{displayEmail}</p>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full bg-ink-800 border border-ink-700 text-sm font-medium hover:bg-ink-700 text-ink-200 transition-colors cursor-pointer"
+                    >
+                      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                      {theme === "dark" ? "Light" : "Dark"}
+                    </button>
+                    <Link
+                      href="/settings"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full bg-ink-800 border border-ink-700 text-sm font-medium hover:bg-ink-700 text-ink-200 transition-colors"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Link>
+                  </div>
+
+                  <button
+                    onClick={() => { handleSignOut(); setMobileOpen(false); }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors cursor-pointer mt-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full bg-ink-800 border border-ink-700 text-sm font-medium hover:bg-ink-700 text-ink-200 transition-colors cursor-pointer"
+                    >
+                      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                      {theme === "dark" ? "Light" : "Dark"}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-full bg-ink-800 border border-ink-700 text-foreground text-sm font-medium hover:bg-ink-700 transition-colors"
+                    >
+                      <LogIn className="h-4 w-4 text-primary" />
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary-hover transition-colors shadow-md"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Register
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}

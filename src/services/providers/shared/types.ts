@@ -1,9 +1,20 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Manga, Chapter, ChapterPage, SearchFilters } from "@/types";
 
-// ---------------------------------------------------------------------------
-// Capability Model
-// ---------------------------------------------------------------------------
+export type CapabilityLevel = "UNSUPPORTED" | "EXPERIMENTAL" | "PARTIAL" | "FULL";
+
+/**
+ * Descriptor capabilities allowing granular level matching (Unsupported, Experimental, Partial, Full).
+ */
+export interface DescriptorProviderCapabilities {
+  search:   CapabilityLevel;
+  details:  CapabilityLevel;
+  chapters: CapabilityLevel;
+  pages:    CapabilityLevel;
+  latest:   CapabilityLevel;
+  trending: CapabilityLevel;
+  genres:   CapabilityLevel;
+}
 
 /**
  * Typed capability object for a provider.
@@ -15,6 +26,7 @@ export interface ProviderCapabilities {
   trending: boolean;
   merge:    boolean;
   reader:   boolean;
+  descriptor?: DescriptorProviderCapabilities;
 }
 
 // ---------------------------------------------------------------------------

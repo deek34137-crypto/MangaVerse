@@ -1,18 +1,53 @@
 /**
- * Reader Engine v2 Main Controller
- * Orchestrates GestureEngine, PrefetchManager, MemoryManager, RecoveryManager,
- * DownloadBridge, TelemetryBridge, and LifecycleManager.
+ * Reader Engine Main Controller & Formal State Machine
+ * 
+ * Governance & State Flow:
+ * Idle -> LoadingChapter -> LoadingImages -> Ready -> Reading -> Paused -> Recovering -> Finished
  */
 
-import { gestureEngine } from "./GestureEngine";
 import { prefetchManager } from "./PrefetchManager";
 import { memoryManager } from "./MemoryManager";
 import { recoveryManager } from "./RecoveryManager";
 import { readerLifecycleManager } from "./ReaderLifecycle";
 import { categorizedEventBus } from "./ReaderEventBus";
+import { readerPriorityScheduler } from "./ReaderPriorityScheduler";
+
+export type ReaderState = 
+  | "Idle"
+  | "LoadingChapter"
+  | "LoadingImages"
+  | "Ready"
+  | "Reading"
+  | "Paused"
+  | "Recovering"
+  | "Finished";
 
 export class ReaderController {
+  private state: ReaderState = "Idle";
+
+  public getState(): ReaderState {
+    return this.state;
+  }
+
+  public setState(newState: ReaderState): void {
+    if (this.state === newState) return;
+    const previousState = this.state;
+    this.state = newState;
+
+    categorizedEventBus.emit("READER_STATE_CHANGED", {
+      from: previousState,
+      to: newState,
+      timestamp: Date.now(),
+    });
+
+    // Handle Paused state (background tab / mobile app switch)
+    if (newState === "Paused") {
+      readerPriorityScheduler.cancelAll();
+    }
+  }
+
   public initialize(mangaId: string, chapterId: string): void {
+    this.setState("LoadingChapter");
     readerLifecycleManager.setStage("INITIALIZE");
     readerLifecycleManager.setStage("LOAD_SETTINGS");
     readerLifecycleManager.setStage("RESTORE_SESSION");
@@ -25,14 +60,43 @@ export class ReaderController {
         });
       }
       readerLifecycleManager.setStage("BUILD_RENDERER");
-      readerLifecycleManager.setStage("BEGIN_READING");
+      this.setState("LoadingImages");
     });
   }
 
-  public onPageChanged(mangaId: string, chapterId: string, pageNumber: number, totalPages: number, pages: string[], prefetchDepth: number): void {
+  public markImagesReady(): void {
+    if (this.state === "LoadingImages" || this.state === "Recovering") {
+      this.setState("Ready");
+      this.setState("Reading");
+    }
+  }
+
+  public pause(): void {
+    if (this.state === "Reading" || this.state === "Ready") {
+      this.setState("Paused");
+    }
+  }
+
+  public resume(): void {
+    if (this.state === "Paused") {
+      this.setState("Reading");
+    }
+  }
+
+  public onPageChanged(
+    mangaId: string,
+    chapterId: string,
+    pageNumber: number,
+    totalPages: number,
+    pages: string[],
+    prefetchDepth: number,
+    readingMode: string = "vertical"
+  ): void {
+    if (this.state === "Paused") return;
+
     categorizedEventBus.emit("READER_PAGE_CHANGED", { pageNumber, totalPages });
 
-    // Save session with version v1.0.0
+    // Save exact reading session
     recoveryManager.saveSession({
       version: "1.0.0",
       mangaId,
@@ -40,16 +104,25 @@ export class ReaderController {
       pageNumber,
       zoomScale: 1.0,
       scrollOffset: typeof window !== "undefined" ? window.scrollY : 0,
-      readingMode: "vertical",
+      readingMode: readingMode as any,
       updatedAt: Date.now(),
     });
 
-    // Schedule background prefetch via PrefetchManager
+    // Enforce memory window cleanup (±3 pages)
+    memoryManager.pruneInactiveBitmaps(pageNumber, 3);
+
+    // Schedule background prefetch
     const remainingPages = pages.slice(pageNumber);
     prefetchManager.schedulePrefetch(remainingPages, prefetchDepth);
+
+    if (pageNumber >= totalPages - 1) {
+      this.setState("Finished");
+    }
   }
 
   public destroy(): void {
+    this.setState("Idle");
+    readerPriorityScheduler.cancelAll();
     readerLifecycleManager.setStage("DESTROY");
     categorizedEventBus.clear();
   }
