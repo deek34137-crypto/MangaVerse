@@ -12,79 +12,13 @@ interface CachedFetch {
   etag: string;
 }
 
+import { providerPolicyRegistry } from "@/services/providers/shared/provider-policy";
+
 // In-memory map of active fetch promises for deduplication
 const activeFetches = new Map<string, Promise<CachedFetch>>();
 
-const ALLOWED_HOSTS = [
-  // MangaDex & MangaDex @at-home nodes
-  "uploads.mangadex.org",
-  "mangadex.org",
-  "mangadex.network",
-  "cmdgd.org",
-
-  // ComicK
-  "comick.app",
-  "comick.cc",
-  "comick.fun",
-  "comick.io",
-  "comick.pictures",
-
-  // MangaSee & MangaLife
-  "mangasee123.com",
-  "mangalifeus.com",
-
-  // MangaNato & ChapMangaNato
-  "manganato.com",
-  "chapmanganato.to",
-  "chapmanganato.com",
-  "chapmanganato.org",
-  "manganato.info",
-
-  // MangaKatana
-  "mangakatana.com",
-
-  // WeebCentral CDN targets
-  "weebcentral.com",
-  "planeptune.us",
-  "compsci88.com",
-
-  // WEBTOON CDN
-  "pstatic.net",
-  "webtoon-phinf.pstatic.net",
-  "webtoons-static.pstatic.net",
-  "webtoons.com",
-
-  // Common CDN proxies & image hosts
-  "wp.com",
-  "blogspot.com",
-  "bp.blogspot.com",
-  "cloudinary.com",
-  "imgur.com",
-  "catbox.moe",
-  "cubari.moe",
-];
-
 function getRefererForHost(hostname: string, protocol: string): string {
-  const lowerHost = hostname.toLowerCase();
-  if (lowerHost.endsWith("pstatic.net") || lowerHost.endsWith("webtoons.com")) {
-    return "https://www.webtoons.com/";
-  }
-  if (lowerHost.endsWith("comick.pictures") || lowerHost.endsWith("comick.io") || lowerHost.endsWith("comick.app") || lowerHost.endsWith("comick.cc") || lowerHost.endsWith("comick.fun")) {
-    return "https://comick.io/";
-  }
-  if (lowerHost.endsWith("mangadex.org") || lowerHost.endsWith("cmdgd.org") || lowerHost.endsWith("mangadex.network")) {
-    return "https://mangadex.org/";
-  }
-  if (lowerHost.endsWith("mangakatana.com")) {
-    return "https://mangakatana.com/";
-  }
-  if (lowerHost.endsWith("weebcentral.com") || lowerHost.endsWith("planeptune.us") || lowerHost.endsWith("compsci88.com")) {
-    return "https://weebcentral.com/";
-  }
-  if (lowerHost.endsWith("manganato.com") || lowerHost.endsWith("chapmanganato.to") || lowerHost.endsWith("chapmanganato.com")) {
-    return "https://chapmanganato.to/";
-  }
-  return `${protocol}//${hostname}/`;
+  return providerPolicyRegistry.getRefererForHost(hostname, protocol);
 }
 
 function isPrivateIp(ip: string): boolean {
@@ -172,9 +106,7 @@ export async function GET(request: NextRequest) {
         const hostname = parsed.hostname;
 
         // 1. Host Validation
-        const isAllowed = ALLOWED_HOSTS.some(
-          (host) => hostname === host || hostname.endsWith("." + host)
-        );
+        const isAllowed = providerPolicyRegistry.isHostAllowed(hostname);
 
         if (!isAllowed) {
           throw new Error("Forbidden domain");

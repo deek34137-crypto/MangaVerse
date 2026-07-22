@@ -1,0 +1,62 @@
+# Phase 19 Aggregation Readiness & Provider Handoff Specification
+# Generated at Phase 18 Completion (2026-07-22)
+
+version: "1.0"
+providerEcosystemStatus:
+  totalProviders: 8
+  ecosystemFrozen: true
+  freezeDate: "2026-07-22"
+  activeProviders:
+    - id: mangadex
+      type: json_api
+      priority: 1
+      capabilities: [search, latest, trending, merge, reader, official_translations, high_res_cover]
+    - id: comick
+      type: json_api
+      priority: 2
+      capabilities: [search, latest, trending, merge, reader, high_res_cover]
+    - id: weebcentral
+      type: html_scraper
+      priority: 3
+      capabilities: [search, latest, trending, merge, reader]
+    - id: mangakatana
+      type: html_scraper
+      priority: 4
+      capabilities: [search, latest, trending, merge, reader]
+    - id: webtoon
+      type: html_scraper
+      priority: 5
+      capabilities: [search, latest, trending, merge, reader, official_translations]
+    - id: mangatoon
+      type: html_scraper
+      priority: 6
+      capabilities: [search, latest, trending, merge, reader]
+    - id: mangabuddy
+      type: html_scraper
+      priority: 7
+      capabilities: [search, latest, trending, merge, reader]
+    - id: mangatown
+      type: html_scraper
+      priority: 8
+      capabilities: [search, latest, merge, reader]
+
+aggregationReadiness:
+  canonicalTitleNormalization: true
+  unifiedContractValidation: true
+  sharedHtmlUtilities: true
+  providerPolicyRegistry: true
+  dynamicImageProxyWhitelist: true
+  parserFailureErrorClassification: true
+  healthTelemetryAndCircuitBreaker: true
+  reliabilitySuitePassRate: "10/10 (100%)"
+
+phase19ArchitectureHandoff:
+  targetModules:
+    - name: Canonical Aggregator Engine
+      path: src/services/aggregation/aggregator.ts
+    - name: Multi-Provider Title Normalizer & Deduplicator
+      path: src/services/aggregation/title-normalizer.ts
+    - name: Chapter Merge Matrix & Priority Resolver
+      path: src/services/aggregation/chapter-merger.ts
+    - name: Fallback Router & Circuit Breaker Switcher
+      path: src/services/aggregation/fallback-router.ts

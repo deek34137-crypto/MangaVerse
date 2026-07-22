@@ -38,6 +38,13 @@ export class ParsingFailure extends ProviderError {
   }
 }
 
+export class ParserError extends ParsingFailure {
+  constructor(providerName: string, fieldName: string, details?: string) {
+    super(providerName, `Critical field missing ("${fieldName}"): ${details || "structural drift or missing selector"}`);
+    this.name = "ParserError";
+  }
+}
+
 export class ProviderBlocked extends ProviderError {
   constructor(providerName: string, details?: string) {
     super(providerName, `Request blocked (403): ${details || "No details provided"}`, "BLOCKED", false);

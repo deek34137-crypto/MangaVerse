@@ -1,11 +1,12 @@
 # Aggregator Merge Specification
 
-```text
-Specification Version: 1.0
-Last Updated: 2026-07-16
-Compatibility: MangaHub Aggregator v1.0
-Status: Frozen / Reference Spec
-```
+Version: 1.1  
+Last Updated: 2026-07-22  
+Related Phase: Phase 7 & Phase 19  
+Related Components:  
+- AggregatorMergeEngine  
+- ProvenanceTracker  
+- MangaMappingSchema  
 
 This specification defines the conflict resolution rules and canonical metadata merging strategy within the MangaHub Aggregator.
 
@@ -13,7 +14,7 @@ This specification defines the conflict resolution rules and canonical metadata 
 
 ## 1. Merging & Ingestion Pipeline Algorithm
 
-```
+```text
                   ┌──────────────────────────────┐
                   │ Candidate Metadata Arrives   │
                   └──────────────┬───────────────┘
@@ -97,6 +98,8 @@ When multiple scrapers return metadata for the same canonical manga, the aggrega
 | **ComicK** | `0.92` | Accurate releases but title tags sometimes have scraper artifacts. |
 | **WEBTOON** | `0.95` | Source publisher for official series; high trust for webtoons. |
 | **WeebCentral**| `0.80` | Scraping fallback, relies on title cards which can be altered. |
+| **MangaKatana**| `0.82` | Stable HTML scraper catalog with quick chapter updates. |
+| **MangaToon**  | `0.78` | Official/licensed mobile catalog. |
 | **MangaBuddy** | `0.75` | Mirror content; fallback priority only. |
 | **MangaTown**  | `0.70` | Old indexes; least preferred metadata. |
 

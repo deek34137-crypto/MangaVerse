@@ -1,7 +1,7 @@
 # MangaHub — Project Roadmap & Production Architecture
 
 > **Last Updated:** 2026-07-22  
-> **Current Phase:** Phase 16 — MangaToon Provider Integration
+> **Current Phase:** Phase 18 — MangaTown Provider Integration
 
 This document is the canonical reference for the MangaHub build sequence and platform architecture. Every phase is scoped to a clear objective, produces verifiable technical deliverables, and serves as a prerequisite for downstream development.
 
@@ -19,15 +19,15 @@ This document is the canonical reference for the MangaHub build sequence and pla
 
 | Status | Count |
 |---|---:|
-| ✅ Complete | 10 |
+| ✅ Complete | 12 |
 | 🟡 Partially Complete | 5 |
-| 🔴 Pending | 17 |
+| 🔴 Pending | 15 |
 | **Total Phases** | **32** |
 
 ### Current Development Focus
 
 **Active Phase:**  
-Phase 16 — MangaToon Provider Integration
+Phase 18 — MangaTown Provider Integration
 
 **Stable Platform Areas:**  
 - ✓ Core Scraper Architecture & Shared Transport Infrastructure
@@ -304,31 +304,32 @@ Phase 16 — MangaToon Provider Integration
 
 ---
 
-### 🔴 Phase 16 — MangaToon Provider Integration
+### ✅ Phase 16 — MangaToon Provider Integration
 
-**Status:** Pending
+**Status:** Complete
 
 **Objective:** Implement and certify the MangaToon scraper provider against the platform contract.
 
 **Key Deliverables:**
-- `src/services/providers/mangatoon/` directory implementation conforming to `BaseProvider`
+- `src/services/providers/mangatoon/` directory implementation conforming to `BaseProvider` (`provider.json`, `provider.ts`, `parser.ts`, `client.ts`, `mapping.ts`, `selectors.ts`, `index.ts`, `README.md`)
 - Dedicated HTML parser and selectors handling MangaToon layout structures
-- 9-check certification suite validation (`scripts/test-provider-suite.ts`)
-- Registry registration, capability declaration, and CDN image proxy whitelist entry
+- Passed all 9 standardized provider certification suite checks (`scripts/test-provider-suite.ts mangatoon`)
+- Registry registration, capability declaration, and CDN image proxy whitelist entries (`mangatoon.mobi`, `cdn.mangatoon.mobi`, `mangatoon.net`, `mktoon.com`)
 
 ---
 
-### 🔴 Phase 17 — MangaBuddy Provider Integration
+### ✅ Phase 17 — MangaBuddy Provider Integration
 
-**Status:** Pending
+**Status:** Complete
 
 **Objective:** Implement and certify the MangaBuddy scraper provider against the platform contract.
 
 **Key Deliverables:**
-- `src/services/providers/mangabuddy/` directory implementation conforming to `BaseProvider`
-- Parser logic handling obfuscated page image links and dynamic chapter structures
-- 9-check certification suite validation and registry registration
-- CDN domain proxy whitelist integration
+- `src/services/providers/shared/html/` utilities (`antiBot.ts`, `url.ts`)
+- `src/services/providers/mangabuddy/` directory implementation conforming to `BaseProvider` (`provider.json`, `provider.ts`, `parser.ts`, `client.ts`, `mapping.ts`, `selectors.ts`, `index.ts`, `README.md`)
+- Dual-mode search handling JSON search API with HTML catalog fallback
+- Passed all 9 standardized provider certification suite checks (`scripts/test-provider-suite.ts mangabuddy`)
+- Registry registration, capability declaration, and explicit CDN image proxy whitelist entries (`mangabuddy1.co.uk`, `cdn1.love4awalk.xyz`, `cdn2.love4awalk.xyz`)
 
 ---
 

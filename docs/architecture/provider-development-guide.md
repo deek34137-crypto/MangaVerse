@@ -1,11 +1,13 @@
 # Provider Development Guide
 
-```text
-Specification Version: 1.1
-Last Updated: 2026-07-19
-Compatibility: MangaHub Aggregator v1.0
-Status: Frozen / Reference Guide
-```
+Version: 1.2  
+Last Updated: 2026-07-22  
+Related Phase: Phase 1 & Phase 2  
+Related Components:  
+- BaseProvider  
+- ProviderManifest  
+- ProviderMetricsCollector  
+- ProviderSnapshotWriter  
 
 This guide details how to implement, version, test, and register a new provider plugin in the MangaHub platform. Every future provider should follow exactly the specifications and checklists laid out in this document.
 
@@ -18,44 +20,58 @@ Every new provider must reside in its own folder under `src/services/providers/<
 ```text
 src/services/providers/<provider_id>/
 ├── constants.ts     # Static metadata, config, network settings, and selectors
-├── parser.ts        # Cheerio HTML parser implementing ProviderParser
+├── parser.ts        # Cheerio HTML parser or API parser implementing ProviderParser
 ├── client.ts        # Fetch client invoking the shared Transport
 ├── mapping.ts       # Normalization of parsed objects to raw provider models
-├── provider.json    # Manifest declaring metadata and capabilities
+├── provider.json    # Manifest declaring metadata and capabilities (validated via Zod)
 ├── provider.ts      # Main class extending BaseProvider
-└── index.ts         # Export config, metadata, and provider class
+└── index.ts         # Export config, metadata, and provider instance
 ```
 
 ---
 
 ## 2. BaseProvider SDK Class
 
-To prevent duplicate boilerplate across scrapers, all new provider classes extend the `BaseProvider` abstract base class, which wires up the shared `Transport` layer automatically:
+To prevent duplicate boilerplate across scrapers, all new provider classes extend the `BaseProvider` abstract base class, which wires up the shared `Transport` layer, rolling metrics collector, debug snapshot recorder, and confidence scoring automatically:
 
 ```typescript
-import { IMangaProvider, ProviderConfig, ProviderCapabilities, RawProviderManga, RawProviderChapter, RawProviderPage, ProviderRuntimeState } from "../shared/types";
+import {
+  IMangaProvider, ProviderCapabilities, ProviderConfig,
+  RawProviderManga, RawProviderChapter, RawProviderPage,
+  ProviderHealth
+} from "../shared/types";
 import { Transport } from "../shared/transport/transport";
+import { ProviderManifestInput } from "../shared/base-provider";
 
 export abstract class BaseProvider implements IMangaProvider {
+  public abstract readonly name: string;
+  public abstract readonly version: string;
+
   protected readonly transport: Transport;
 
   constructor(
-    public readonly config: ProviderConfig,
-    public readonly capabilities: ProviderCapabilities,
-    public readonly parser: any
+    manifestOrConfig: ProviderManifestInput | ProviderConfig,
+    public readonly capabilities: ProviderCapabilities
   ) {
-    this.transport = new Transport(config.network);
+    // Shared Transport, ProviderMetricsCollector, and ProviderSnapshotWriter initialized automatically
   }
 
   protected request(url: string, options?: RequestInit) {
     return this.transport.requestText(url, options);
   }
 
-  abstract searchManga(query: string, options?: any): Promise<RawProviderManga[]>;
+  /** Called by provider implementations after parsing a response to record data quality. */
+  protected recordConfidenceSample(
+    titlePresent: boolean,
+    imageUrlValid: boolean,
+    chapterNumberValid: boolean
+  ): void;
+
+  abstract searchManga(query: string, options?: Record<string, unknown>): Promise<RawProviderManga[]>;
   abstract getMangaDetail(providerMangaId: string): Promise<RawProviderManga>;
   abstract getChapters(providerMangaId: string): Promise<RawProviderChapter[]>;
   abstract getChapterPages(providerChapterId: string): Promise<RawProviderPage[]>;
-  abstract healthCheck(): Promise<ProviderRuntimeState>;
+  abstract healthCheck(): Promise<ProviderHealth>;
 }
 ```
 
@@ -70,28 +86,46 @@ npm run generate:provider <provider_id>
 ```
 
 This automatically scaffolds:
-- The provider directory containing stubbed files.
+- The provider directory containing stubbed files (`provider.json`, `provider.ts`, `parser.ts`, `client.ts`, `mapping.ts`, `index.ts`).
 - The fixture path under `tests/fixtures/<provider_id>/`.
 - The testing file `scripts/test-<provider_id>.ts`.
 
 ---
 
-## 4. Provider Feature Matrix
+## 4. Provider Manifest (`provider.json`) & Capabilities
 
-At the beginning of every provider manifest, explicitly declare what capabilities the provider supports. Later, the UI can query these flags directly (e.g. `if (provider.capabilities.latest)`) rather than hardcoding special cases for specific provider IDs.
+Every provider must include a `provider.json` file in its root module directory, validated by Zod at registration time:
 
 ```json
-"capabilities": {
-  "search": true,
-  "latest": true,
-  "trending": false,
-  "merge": true,
-  "reader": true,
-  "adult": false,
-  "official": true,
-  "authentication": false,
-  "multiLanguage": true,
-  "pagination": true
+{
+  "manifestSchemaVersion": "1.0",
+  "id": "mangatoon",
+  "displayName": "MangaToon",
+  "providerVersion": "1.0.0",
+  "priority": 4,
+  "baseUrl": "https://mangatoon.mobi",
+  "network": {
+    "timeoutMs": 8000,
+    "retries": 3,
+    "rateLimit": {
+      "maxRequests": 10,
+      "intervalMs": 1000
+    }
+  },
+  "cache": {
+    "ttlSearchMs": 300000,
+    "ttlMangaMs": 3600000,
+    "ttlChaptersMs": 1800000,
+    "ttlPagesMs": 86400000
+  },
+  "capabilities": {
+    "search": true,
+    "latest": true,
+    "trending": false,
+    "merge": true,
+    "reader": true
+  },
+  "enabled": true
 }
 ```
 
@@ -117,13 +151,6 @@ Distinguish between changes to HTTP client routes and changes to HTML parsing. T
 
 * **providerVersion**: Tracks logic changes in the client, API structures, or base network behaviors.
 * **parserVersion**: Tracks the parsing code itself. If the host site modifies its HTML layout, update the selectors/parsers and increment `parserVersion++` while leaving `providerVersion` unchanged.
-
-```json
-{
-  "providerVersion": "1.0.0",
-  "parserVersion": "1.0.1"
-}
-```
 
 ---
 
@@ -151,6 +178,7 @@ Probes and integration tests must not perform random searches. Establish a stabl
 
 * **WEBTOON**: `fantasy:tower-of-god:95`
 * **MangaDex**: `32feade8-3c8e-4770-ac22-de9ef016c277` (One Piece)
+* **ComicK**: `00-one-piece`
 * **MangaKatana**: `solo-leveling.21147`
 
 ---
@@ -169,22 +197,20 @@ fixtures/
 ├── chapters.expected.json
 ```
 
-Parser unit tests must load the HTML, run the parser, and perform deep equality checks against the `.expected.json` file. This catches subtle parsing regressions (e.g. author parsing breaking or drop rates parsing incorrectly).
+Parser unit tests must load the HTML, run the parser, and perform deep equality checks against the `.expected.json` file. This catches subtle parsing regressions.
 
 ---
 
-## 10. Provider Scoring
+## 10. Provider Scoring & Health Lifecycle
 
-To support intelligent query routing and metadata aggregation, calculate a dynamic runtime provider score instead of using static priority rules:
+Calculate dynamic runtime provider score based on rolling 15-minute metrics and 5-state health lifecycle (`ONLINE | DEGRADED | RATE_LIMITED | BLOCKED | OFFLINE`):
 
 $$\text{ProviderScore} = \text{priority} + \text{confidence} + \text{health} + \text{latency}$$
 
 * **priority**: Static importance configured in `provider.json`.
-* **confidence**: Runtime data quality confidence score (0 to 1).
-* **health**: Operational health classification.
-* **latency**: Observed network performance.
-
-The merge engine can sort by `ProviderScore` to select the best provider dynamically.
+* **confidence**: Runtime data quality confidence score (0 to 1) computed from `recordConfidenceSample()`.
+* **health**: Operational health classification (`ONLINE`, `DEGRADED`, etc.).
+* **latency**: Observed network performance from rolling 15-minute metric windows.
 
 ---
 
@@ -234,53 +260,16 @@ Mappers must validate each object against this quality checklist before returnin
 
 ---
 
-## 14. Provider Lifecycle
+## 14. Provider Certification Checklist
 
-Every provider is tracked through the following state machine:
+Before merging any scraper branch into the main production branch, it must pass the 9 standardized certification checks (`scripts/test-provider-suite.ts`):
 
-$$\text{DISCOVERED} \to \text{IMPLEMENTED} \to \text{PARSER VERIFIED} \to \text{LIVE VERIFIED} \to \text{ENABLED} \to \text{MERGED} \to \text{MONITORED} \to \text{DEPRECATED}$$
-
----
-
-## 15. Aggregation Readiness
-
-In preparation for content aggregation (Milestone 3), every provider must declare its aggregation readiness schema directly in its manifest:
-
-```json
-"aggregation": {
-  "enabled": true,
-  "mergePriority": 3,
-  "canonicalCandidate": true
-}
-```
-
-The merge engine uses this directly at runtime instead of hardcoding list assumptions.
-
----
-
-## 16. Provider Certification Checklist
-
-Before merging any scraper branch into the main production branch, it must pass the following certification checks:
-
-- [ ] **Functional Searches**: Search query successfully returns matching catalogs.
-- [ ] **Manga Details**: Metadata (title, description, cover image) parses completely.
-- [ ] **Chapter Indexes**: Returns a list of active chapters matching source indices.
-- [ ] **Pages List**: Chapter pages return valid image arrays with no blank placeholders.
-- [ ] **SSRF & Image Proxy Checks**: Proxy loads images and appends headers without error.
-- [ ] **Granular Health Check**: `healthCheck()` reports correct states and latencies.
-- [ ] **Fixtures Saved**: Local HTML mock pages are saved under `tests/fixtures/`.
-- [ ] **Expected Outputs Recorded**: Corresponding `.expected.json` files are recorded.
-- [ ] **Tests Pass**: Local scraper and E2E regression scripts execute successfully.
-- [ ] **Linter & Typings**: No TS compilation issues or ESLint warnings are present.
-- [ ] **SLOs Met**: Latencies for search, details, and chapter page fetches fall within defined limits.
-
----
-
-## 17. Pragmatic Extension Principle
-
-Continuing to add abstractions before implementing more providers produces diminishing returns. Follow this workflow:
-1. Implement 4–6 more providers first.
-2. Observe recurring patterns or concrete pain points.
-3. Refine the platform *only* when multiple active providers reveal a genuine need.
-
-This keeps the platform architecture driven by real-world usage rather than speculation.
+- [ ] **1. Manifest Validation**: `provider.json` passes Zod manifest schema checks.
+- [ ] **2. Functional Searches**: Search query successfully returns matching catalogs.
+- [ ] **3. Manga Details**: Metadata (title, description, cover image) parses completely.
+- [ ] **4. Chapter Indexes**: Returns a list of active chapters matching source indices.
+- [ ] **5. Pages List**: Chapter pages return valid image arrays with no blank placeholders.
+- [ ] **6. SSRF & Image Proxy Checks**: Proxy loads images and appends headers without error.
+- [ ] **7. Health Check**: `healthCheck()` reports correct states and latencies.
+- [ ] **8. Fixtures & Expected Outputs**: HTML mock pages and `.expected.json` files recorded.
+- [ ] **9. Linter & Typings**: No TS compilation issues (`npx tsc --noEmit`) or ESLint warnings.

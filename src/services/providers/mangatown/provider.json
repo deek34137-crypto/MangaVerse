@@ -1,0 +1,30 @@
+{
+  "manifestSchemaVersion": "1.0",
+  "id": "mangatown",
+  "displayName": "MangaTown",
+  "providerVersion": "1.0.0",
+  "priority": 6,
+  "baseUrl": "https://www.mangatown.com/",
+  "network": {
+    "timeoutMs": 12000,
+    "retries": 3,
+    "rateLimit": {
+      "maxRequests": 10,
+      "intervalMs": 2000
+    }
+  },
+  "cache": {
+    "ttlSearchMs": 300000,
+    "ttlMangaMs": 86400000,
+    "ttlChaptersMs": 1800000,
+    "ttlPagesMs": 86400000
+  },
+  "capabilities": {
+    "search": true,
+    "latest": true,
+    "trending": false,
+    "merge": true,
+    "reader": true
+  },
+  "enabled": true
+}

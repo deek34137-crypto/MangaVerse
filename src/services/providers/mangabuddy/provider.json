@@ -1,0 +1,30 @@
+{
+  "manifestSchemaVersion": "1.0",
+  "id": "mangabuddy",
+  "displayName": "MangaBuddy",
+  "providerVersion": "1.0.0",
+  "priority": 5,
+  "baseUrl": "https://mangabuddy1.co.uk",
+  "network": {
+    "timeoutMs": 10000,
+    "retries": 3,
+    "rateLimit": {
+      "maxRequests": 5,
+      "intervalMs": 1000
+    }
+  },
+  "cache": {
+    "ttlSearchMs": 300000,
+    "ttlMangaMs": 86400000,
+    "ttlChaptersMs": 1800000,
+    "ttlPagesMs": 86400000
+  },
+  "capabilities": {
+    "search": true,
+    "latest": true,
+    "trending": true,
+    "merge": true,
+    "reader": true
+  },
+  "enabled": true
+}
