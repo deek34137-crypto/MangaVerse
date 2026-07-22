@@ -2,8 +2,9 @@ import React from "react";
 import { loadReaderPage } from "@/services/ui/loaders/reader.loader";
 import { ReaderView } from "@/components/reader/reader-view";
 
-export default async function ReaderPage({ params }: { params: { chapterId: string } }) {
-  const viewModel = await loadReaderPage("manga_default", params.chapterId);
+export default async function ReaderPage({ params }: { params: Promise<{ chapterId: string }> }) {
+  const resolvedParams = await params;
+  const viewModel = await loadReaderPage("manga_default", resolvedParams.chapterId);
 
   if (viewModel.type === "ERROR") {
     return (

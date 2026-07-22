@@ -1,7 +1,7 @@
 import React from "react";
 import { loadMangaDetailPage } from "@/services/ui/loaders/manga.loader";
 
-export default async function MangaDetailPage({ params }: { params: { id: string } }) {
+export default async function MangaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const viewModel = await loadMangaDetailPage(resolvedParams.id);
 
