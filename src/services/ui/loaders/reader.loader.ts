@@ -7,7 +7,7 @@ export async function loadReaderPage(
 ): Promise<ReaderResultViewModel> {
   try {
     const chapters = await aggregator.getChapters(canonicalId);
-    const targetChapter = chapters.find((c) => c.canonicalChapterId === chapterId) || chapters[0];
+    const targetChapter = chapters.find((c) => (c.canonicalChapterId || c.id) === chapterId) || chapters[0];
 
     if (!targetChapter || targetChapter.sources.length === 0) {
       return {
@@ -20,9 +20,9 @@ export async function loadReaderPage(
 
     const streamResult = await aggregator.getReader(targetChapter.sources);
 
-    const targetIdx = chapters.findIndex((c) => c.canonicalChapterId === targetChapter.canonicalChapterId);
-    const nextChapterId = targetIdx > 0 ? chapters[targetIdx - 1].canonicalChapterId : undefined;
-    const prevChapterId = targetIdx < chapters.length - 1 ? chapters[targetIdx + 1].canonicalChapterId : undefined;
+    const targetIdx = chapters.findIndex((c) => (c.canonicalChapterId || c.id) === (targetChapter.canonicalChapterId || targetChapter.id));
+    const nextChapterId = targetIdx > 0 ? (chapters[targetIdx - 1].canonicalChapterId || chapters[targetIdx - 1].id) : undefined;
+    const prevChapterId = targetIdx < chapters.length - 1 ? (chapters[targetIdx + 1].canonicalChapterId || chapters[targetIdx + 1].id) : undefined;
 
     return toReaderViewModel(
       chapterId,

@@ -65,9 +65,9 @@ export function toMangaDetailViewModel(
   }));
 
   const chapterItems: ChapterItemViewModel[] = chapters.map((ch) => ({
-    chapterId: ch.canonicalChapterId,
-    chapterNumber: ch.chapterNumber?.toString() || "1",
-    chapterLabel: formatChapterLabel(ch.chapterNumber, ch.title),
+    chapterId: ch.canonicalChapterId || ch.id,
+    chapterNumber: ch.chapterNumber?.toString() || ch.key?.chapter?.toString() || "1",
+    chapterLabel: formatChapterLabel(ch.chapterNumber || ch.key?.chapter, ch.title),
     releasedAtLabel: formatRelativeDate(ch.releasedAt),
     sourcesCount: ch.sources.length,
   }));

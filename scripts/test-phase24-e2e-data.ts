@@ -42,7 +42,7 @@ async function runDataCertificationSuite() {
     const chapter = chapters[0];
     const stream = await aggregator.getReader(chapter.sources);
     if (stream.pages.length === 0) {
-      throw new Error(`[FAIL] Chapter ${chapter.canonicalChapterId} returned 0 pages.`);
+      throw new Error(`[FAIL] Chapter ${chapter.canonicalChapterId || chapter.id} returned 0 pages.`);
     }
     console.log(`[PASS] Chapter stream contains ${stream.pages.length} sequential HTTPS image pages.`);
   }

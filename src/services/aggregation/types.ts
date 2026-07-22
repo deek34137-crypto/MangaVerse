@@ -95,11 +95,14 @@ export interface ChapterSource {
 
 export interface CanonicalChapter {
   id: string;
+  canonicalChapterId?: string;
   aggregationVersion: typeof AGGREGATION_VERSION;
   canonicalMangaId: string;
+  chapterNumber?: number;
   key: StructuredChapterKey;
   title: string;
   sources: ChapterSource[];
+  releasedAt?: string;
   traceId: string;
 }
 
