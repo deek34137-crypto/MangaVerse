@@ -1,12 +1,13 @@
 import { toReaderViewModel, computeMemoryAwarePreloadDepth } from "../src/services/ui/reader.viewmodel";
+import { RawProviderPage } from "../src/services/providers/shared/types";
 
 async function runReaderJourneyCertification() {
   console.log("=== Launch Certification: Workstream 2 — Reader Journey Certification ===");
 
-  const mockPages = [
-    { pageNumber: 1, url: "https://cdn.example.com/p1.jpg" },
-    { pageNumber: 2, url: "https://cdn.example.com/p2.jpg" },
-    { pageNumber: 3, url: "https://cdn.example.com/p3.jpg" },
+  const mockPages: RawProviderPage[] = [
+    { number: 1, url: "https://cdn.example.com/p1.jpg" },
+    { number: 2, url: "https://cdn.example.com/p2.jpg" },
+    { number: 3, url: "https://cdn.example.com/p3.jpg" },
   ];
 
   const vm = toReaderViewModel(

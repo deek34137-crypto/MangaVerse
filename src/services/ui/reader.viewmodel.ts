@@ -61,9 +61,9 @@ export function toReaderViewModel(
     mangaTitle,
     chapterTitle,
     pages: pages.map((p, idx) => ({
-      pageNumber: p.pageNumber || idx + 1,
+      pageNumber: p.number ?? (p as any).pageNumber ?? idx + 1,
       url: p.url,
-      fallbackUrl: p.fallbackUrl,
+      fallbackUrl: (p as any).fallbackUrl,
     })),
     totalPages: pages.length,
     winningProviderBadge: badge,
