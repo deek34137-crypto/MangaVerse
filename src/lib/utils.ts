@@ -319,3 +319,21 @@ export function safeJsonResponse(data: any, init?: ResponseInit) {
   );
   return Response.json(serialized, init);
 }
+
+/**
+ * Inkline 2.2.1 — Immutable Chapter Label Formatter.
+ * Always formats chapter numbers as CH.129 in JetBrains Mono.
+ */
+export function formatChapterLabel(chapterNumber: string | number | null | undefined): string {
+  if (chapterNumber == null || chapterNumber === "") return "CH.1";
+  const str = String(chapterNumber).trim().replace(/^ch(apter)?\.?\s*/i, "");
+  return `CH.${str}`;
+}
+
+/**
+ * Inkline 2.2.1 — Uppercase Magazine Tag Formatter.
+ */
+export function formatMagazineTag(tag: string | null | undefined): string {
+  if (!tag) return "";
+  return tag.trim().toUpperCase();
+}

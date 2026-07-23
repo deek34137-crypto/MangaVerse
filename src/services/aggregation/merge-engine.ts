@@ -98,6 +98,17 @@ export function mergeMangaEntities(
     mergedAt: now,
     traceId,
   };
+
+  const fallbackCovers = sorted
+    .filter((s) => s.data.coverImage && s.data.coverImage.startsWith("http"))
+    .map((s, idx) => ({
+      provider: s.providerId,
+      url: s.data.coverImage!,
+      priority: idx + 1,
+      verifiedAt: now,
+      healthy: s.confidence >= 0.70,
+    }));
+
   fieldDecisions["coverImage"] = {
     winner: coverWinner.providerId,
     reason: `Highest confidence cover image provider (${coverWinner.confidence})`,
@@ -201,6 +212,7 @@ export function mergeMangaEntities(
     title: titleProv,
     description: descProv,
     coverImage: coverProv,
+    fallbackCovers,
     status: statusProv,
     authors: authorsProv,
     genres: genresProv,

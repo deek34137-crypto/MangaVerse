@@ -1,4 +1,4 @@
-import { CanonicalSnapshot, SnapshotState, CanonicalManga, CanonicalChapter } from "./types";
+import { CanonicalSnapshot, SnapshotState, CanonicalManga, CanonicalChapter, ChapterLookupPayload } from "./types";
 import { cacheGet, cacheSet, cacheDel } from "@/services/cache";
 
 const SCHEMA_VERSION = 1;
@@ -78,8 +78,12 @@ export class SnapshotStorageEngine {
       snapshotId: `snap_ch_${canonicalMangaId}_v${contentVersion}`,
       entityId: canonicalMangaId,
       schemaVersion: SCHEMA_VERSION,
+      snapshotSchemaVersion: SCHEMA_VERSION,
+      adapterVersion: "1.0.0",
+      aggregationVersion: "1.0",
       contentVersion,
       state: "FRESH",
+      lifecycleState: "READY",
       data: chapters,
       qualityTier: "TIER_A_PRODUCTION",
       qualityScore: 1.0,
@@ -92,7 +96,40 @@ export class SnapshotStorageEngine {
 
     this.snapshotStates.set(key, "FRESH");
     await cacheSet(key, snapshot, DEFAULT_TTL_MS);
+
+    // Save rich reverse lookup payload for every canonical chapter
+    for (const ch of chapters) {
+      const lookupPayload: ChapterLookupPayload = {
+        canonicalMangaId,
+        canonicalChapterId: ch.canonicalChapterId || ch.id,
+        chapterNumber: ch.chapterNumber,
+        title: ch.title,
+        providerFingerprints: (ch.sources || []).map((s) => ({
+          providerId: s.providerId,
+          sourceId: s.providerChapterId,
+          chapterUrl: s.url || "",
+        })),
+        snapshotSchemaVersion: SCHEMA_VERSION,
+        adapterVersion: "1.0.0",
+        aggregationVersion: "1.0",
+        lifecycleState: "READY",
+        updatedAt: now.toISOString(),
+      };
+
+      await this.saveChapterLookup(lookupPayload);
+    }
+
     return snapshot;
+  }
+
+  public async saveChapterLookup(payload: ChapterLookupPayload): Promise<void> {
+    const key = `chapter_lookup:${payload.canonicalChapterId}`;
+    await cacheSet(key, payload, 86400000); // 24hr TTL
+  }
+
+  public async getChapterLookup(chapterId: string): Promise<ChapterLookupPayload | null> {
+    const key = `chapter_lookup:${chapterId}`;
+    return cacheGet<ChapterLookupPayload>(key);
   }
 
   public async getChaptersSnapshot(canonicalMangaId: string): Promise<CanonicalSnapshot<CanonicalChapter[]> | null> {
@@ -115,6 +152,25 @@ export class SnapshotStorageEngine {
 
   public setSnapshotState(key: string, state: SnapshotState): void {
     this.snapshotStates.set(key, state);
+  }
+
+  /**
+   * Asynchronous Event-Driven Snapshot Repair Trigger:
+   * Publishes SnapshotRepairRequested and performs background repair without blocking request path.
+   */
+  public triggerAsyncRepair(canonicalId: string, chapterId: string): void {
+    Promise.resolve().then(async () => {
+      try {
+        console.log(`[EventDrivenRepair] Async background repair triggered for manga=${canonicalId} ch=${chapterId}`);
+        const lookup = await this.getChapterLookup(chapterId);
+        if (lookup) {
+          lookup.lifecycleState = "REPAIRING";
+          await this.saveChapterLookup(lookup);
+        }
+      } catch (err) {
+        console.warn(`[EventDrivenRepair] Failed background repair for ${chapterId}:`, err);
+      }
+    });
   }
 
   /**

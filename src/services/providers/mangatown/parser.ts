@@ -138,11 +138,25 @@ export function parsePageList(html: string, providerChapterId: string): RawProvi
   const baseImgUrl = imgEl.attr("src") || "";
 
   if (baseImgUrl && totalPages > 0) {
-    // Generate page image URLs based on sequence
+    // Determine base pattern for sequential page image URLs
+    // MangaTown image URLs typically end with .../1.jpg or .../001.jpg
+    const extMatch = baseImgUrl.match(/(\d+)\.(jpg|png|webp|gif)(\?.*)?$/i);
     for (let i = 1; i <= totalPages; i++) {
+      let pageUrl = baseImgUrl;
+      if (extMatch) {
+        const numStr = extMatch[1];
+        const ext = extMatch[2];
+        const query = extMatch[3] || "";
+        const paddedNum = i.toString().padStart(numStr.length, "0");
+        pageUrl = baseImgUrl.replace(/(\d+)\.(jpg|png|webp|gif)(\?.*)?$/i, `${paddedNum}.${ext}${query}`);
+      } else if (i > 1) {
+        // Append query index as distinct fallback URL
+        pageUrl = `${baseImgUrl}?page=${i}`;
+      }
+
       pages.push({
         number: i,
-        url: resolveAbsoluteUrl(baseImgUrl, MANGATOWN_CONSTANTS.BASE_URL),
+        url: resolveAbsoluteUrl(pageUrl, MANGATOWN_CONSTANTS.BASE_URL),
       });
     }
   } else if (baseImgUrl) {
@@ -152,13 +166,16 @@ export function parsePageList(html: string, providerChapterId: string): RawProvi
     });
   }
 
-  if (pages.length === 0) {
+  // Validate image URLs and scheme
+  const validPages = pages.filter((p) => p.url && (p.url.startsWith("http://") || p.url.startsWith("https://")));
+
+  if (validPages.length === 0) {
     throw new ParserError(
       MANGATOWN_CONSTANTS.DISPLAY_NAME,
       "page.url",
-      `Failed to extract chapter pages for chapter ID "${providerChapterId}". Zero image elements found.`
+      `Failed to extract chapter pages for chapter ID "${providerChapterId}". Zero valid image elements found.`
     );
   }
 
-  return pages;
+  return validPages;
 }

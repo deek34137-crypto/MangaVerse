@@ -1,9 +1,9 @@
 export function formatRatingLabel(rating?: number | null): string {
   if (rating === undefined || rating === null || rating <= 0) {
-    return "Not Rated";
+    return "";
   }
   const formatted = rating.toFixed(1);
-  return `★★★★☆ ${formatted}`;
+  return `★ ${formatted}`;
 }
 
 export function formatRelativeDate(isoDate?: string): string {

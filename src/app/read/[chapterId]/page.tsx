@@ -1,9 +1,18 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { loadReaderPage } from "@/services/ui/loaders/reader.loader";
+import { snapshotStorage } from "@/services/aggregation/snapshot-engine";
 import { ReaderView } from "@/components/reader/reader-view";
 
 export default async function ReaderPage({ params }: { params: Promise<{ chapterId: string }> }) {
   const resolvedParams = await params;
+  const lookup = await snapshotStorage.getChapterLookup(resolvedParams.chapterId);
+
+  if (lookup && lookup.canonicalMangaId) {
+    // HTTP 308 Permanent Redirect to Canonical Route
+    redirect(`/manga/${lookup.canonicalMangaId}/chapter/${resolvedParams.chapterId}`);
+  }
+
   const viewModel = await loadReaderPage("manga_default", resolvedParams.chapterId);
 
   if (viewModel.type === "ERROR") {

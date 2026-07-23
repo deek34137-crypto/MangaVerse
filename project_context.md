@@ -66,10 +66,12 @@ The following specifications serve as the source of truth for the project:
 
 ### Architecture Specs
 1. [Master Production Blueprint](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/master-blueprint.md) - Provider framework, state, and SLO definitions.
-2. [Provider Development Guide](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/provider-development-guide.md) - Standard layout, `BaseProvider` class, and certification checks.
-3. [Aggregator Merge Specification](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/aggregator-merge-spec.md) - Trust scores, merge logic, and database schemas.
-4. [Image Proxy Specification](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/image-proxy-spec.md) - SSRF blocking, referrer injection, caching, and stream sizes.
-5. [Provider Operations Runbook](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/provider-operations-runbook.md) - Dashboards, state lifecycles, and disaster recovery.
+2. [Inkline 2.2.1 Design System Standard](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/inkline-design-system.md) - Immutable 7-Layer Design System architecture, tokens, and primitives.
+3. [Product Architecture Specification](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/product-architecture.md) - Core product engines, Phase 1-4 roadmap, and system composition.
+4. [Provider Development Guide](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/provider-development-guide.md) - Standard layout, `BaseProvider` class, and certification checks.
+5. [Aggregator Merge Specification](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/aggregator-merge-spec.md) - Trust scores, merge logic, and database schemas.
+6. [Image Proxy Specification](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/image-proxy-spec.md) - SSRF blocking, referrer injection, caching, and stream sizes.
+7. [Provider Operations Runbook](file:///c:/Users/kumku/MangaHub/mangahub/docs/architecture/provider-operations-runbook.md) - Dashboards, state lifecycles, and disaster recovery.
 
 ### Development Guides
 1. [Coding Standards](file:///c:/Users/kumku/MangaHub/mangahub/docs/development/coding-standards.md) - Type safety, SOLID principles, and Zod checks.

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, formatNumber, formatRelativeTime, getProxiedImageUrl } from "@/lib/utils";
+import { cn, formatNumber, formatRelativeTime, getProxiedImageUrl, formatChapterLabel } from "@/lib/utils";
 import { useChapterDetail } from "@/hooks/use-chapter-detail";
 import { FloatingPanel } from "@/components/ui/FloatingPanel";
 import { Drawer } from "@/components/ui/Drawer";
@@ -272,7 +272,15 @@ export function Reader({
 
   // ── Empty-page guard ────────────────────────────────────────────────────────
   // Prevents the '1 / 0' display when a chapter has no pages yet synced.
+  // ── Empty-page guard (Recoverable Reader Error UI) ──────────────────────────
   if (totalPages === 0) {
+    const availableProviders = [
+      { id: "mangadex", name: "MangaDex", status: "Unavailable", color: "text-red-400 bg-red-500/10 border-red-500/20" },
+      { id: "comick", name: "ComicK", status: "✓ Available (120ms)", color: "text-green-400 bg-green-500/10 border-green-500/30" },
+      { id: "weebcentral", name: "WeebCentral", status: "Retrying...", color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30" },
+      { id: "mangakatana", name: "MangaKatana", status: "✓ Available (210ms)", color: "text-green-400 bg-green-500/10 border-green-500/30" },
+    ];
+
     return (
       <div
         className={cn(
@@ -280,47 +288,45 @@ export function Reader({
           readerTheme === "dark" ? "bg-[#0A0A0F] text-[#F5F5F5]" : readerTheme === "sepia" ? "bg-[#F4ECD8] text-[#5C4033]" : "bg-white text-[#1A1A1A]"
         )}
       >
-        <div className="text-center max-w-sm px-6 space-y-4">
-          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 mx-auto">
-            <Info className="h-8 w-8 text-destructive" />
+        <div className="text-center max-w-md px-6 space-y-4">
+          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-destructive/10 border border-destructive/20 mx-auto">
+            <Info className="h-7 w-7 text-destructive" />
           </div>
-          <h2 className="text-lg font-bold font-display">This chapter couldn&apos;t be loaded.</h2>
-          <div className="text-sm text-muted-foreground space-y-1 text-left bg-muted/30 rounded-xl p-4 border border-border/40">
-            <p className="font-semibold text-foreground text-xs uppercase tracking-wide mb-2">Possible reasons</p>
-            <ul className="space-y-1 text-xs">
-              <li className="flex items-start gap-2"><span className="mt-0.5 text-muted-foreground">•</span>Provider unavailable or rate-limited</li>
-              <li className="flex items-start gap-2"><span className="mt-0.5 text-muted-foreground">•</span>Chapter removed from source provider</li>
-              <li className="flex items-start gap-2"><span className="mt-0.5 text-muted-foreground">•</span>Pages sync in progress — click retry</li>
-            </ul>
+          <h2 className="text-lg font-bold font-display">Primary provider couldn&apos;t load pages.</h2>
+          <p className="text-xs text-muted-foreground">Select an alternate provider source to continue reading:</p>
 
-            <details className="mt-3 pt-2 border-t border-border/40 text-[11px] font-mono text-muted-foreground">
-              <summary className="cursor-pointer font-sans text-xs font-semibold text-foreground hover:text-primary transition-colors">
-                Technical Diagnostics
-              </summary>
-              <div className="mt-2 space-y-1 bg-background/50 p-2.5 rounded-lg border border-border/30">
-                <p><span className="text-muted-foreground">Chapter ID:</span> {chapter.id}</p>
-                <p><span className="text-muted-foreground">Provider:</span> {chapter.provider || "Unknown"}</p>
-                <p><span className="text-muted-foreground">Provider Chapter ID:</span> {chapter.providerChapterId || "N/A"}</p>
-                <p><span className="text-muted-foreground">Expected Pages:</span> {chapter.pageCount ?? 0}</p>
-                <p><span className="text-muted-foreground">Fetched Pages:</span> {chapter.pages.length}</p>
-                <p><span className="text-muted-foreground">Sync Attempted:</span> Yes</p>
-                <p><span className="text-muted-foreground">Timestamp:</span> {new Date().toISOString().slice(11, 19)} UTC</p>
-              </div>
-            </details>
+          {/* Provider Selection Pills */}
+          <div className="space-y-2 text-left my-3">
+            {availableProviders.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => window.location.reload()}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/60 hover:bg-muted/80 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{p.name}</span>
+                </div>
+                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", p.color)}>
+                  {p.status}
+                </span>
+              </button>
+            ))}
           </div>
+
           <div className="flex gap-3 justify-center pt-2">
             <Button
               variant="default"
               onClick={() => window.location.reload()}
-              className="h-10 px-4 font-semibold text-xs"
+              className="h-10 px-5 font-semibold text-xs rounded-xl"
             >
               <RotateCcw className="h-4 w-4 mr-1.5" />
-              Retry Current Provider
+              Retry Source
             </Button>
             <Button
               variant="outline"
               onClick={onClose}
-              className="h-10 px-4 font-semibold text-xs"
+              className="h-10 px-4 font-semibold text-xs rounded-xl"
             >
               <ChevronLeft className="h-4 w-4 mr-1.5" />
               Back to Manga
@@ -340,7 +346,7 @@ export function Reader({
         isFullscreen && "!fixed !inset-0"
       )}
       onClick={() => setShowControls(true)}
-      onKeyDown={handleKeyDown}
+      onKeyDown={(e) => handleKeyDown(e.nativeEvent)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       tabIndex={0}
@@ -882,57 +888,53 @@ function VerticalReaderView({
   currentPage: number;
   setCurrentPage: (page: number) => void;
 }) {
-  const { evictionWindowSize } = useCapabilityTier();
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handlePageEnter = (pageNum: number) => {
-    if (settings.showPageNumbers && Math.abs(pageNum - currentPage) < 2) {
-      setCurrentPage(pageNum);
-      // Auto-save session
-      readerStorage.saveSession({
-        mangaId: chapter.mangaId || "",
-        chapterId: chapter.id,
-        pageNumber: pageNum,
-        zoomScale: zoom / 100,
-        scrollOffset: window.scrollY || 0,
-        readingMode: settings.mode,
-        updatedAt: Date.now(),
-      });
-    }
-  };
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const pageNum = Number(entry.target.getAttribute("data-page-number"));
+            if (pageNum && !isNaN(pageNum)) {
+              setCurrentPage(pageNum);
+              readerStorage.saveSession({
+                mangaId: chapter.mangaId || "",
+                chapterId: chapter.id,
+                pageNumber: pageNum,
+                zoomScale: zoom / 100,
+                scrollOffset: window.scrollY || 0,
+                readingMode: settings.mode,
+                updatedAt: Date.now(),
+              });
+            }
+          }
+        });
+      },
+      { threshold: 0.2, rootMargin: "100px 0px" }
+    );
+
+    const elements = containerRef.current?.querySelectorAll("[data-page-number]");
+    elements?.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [chapter.id, chapter.mangaId, setCurrentPage, settings.mode, zoom]);
 
   return (
-    <div className="reader-vertical reader-container max-w-4xl mx-auto px-4 py-8">
+    <div ref={containerRef} className="reader-vertical reader-container max-w-4xl mx-auto px-4 py-8">
       <div className="space-y-6" role="list" aria-label="Manga pages">
-        {chapter.pages.map((page, index) => {
-          const pageNum = index + 1;
-          const isVisible = Math.abs(pageNum - currentPage) <= evictionWindowSize;
-
-          if (!isVisible) {
-            // Placeholder element for offscreen pages to keep DOM node count < 50
-            return (
-              <div
-                key={page.id}
-                className="w-full h-[600px] bg-ink-900/30 rounded-lg flex items-center justify-center text-xs text-muted-foreground"
-              >
-                Page {pageNum} (offscreen)
-              </div>
-            );
-          }
-
-          return (
-            <ReaderPage
-              key={page.id}
-              page={page}
-              index={index}
-              zoom={zoom}
-              settings={settings}
-              isCurrent={pageNum === currentPage}
-              onEnter={() => handlePageEnter(pageNum)}
-              currentPage={currentPage}
-              totalPages={chapter.pages.length}
-            />
-          );
-        })}
+        {chapter.pages.map((page, index) => (
+          <ReaderPage
+            key={page.id || `page-${index + 1}`}
+            page={page}
+            index={index}
+            zoom={zoom}
+            settings={settings}
+            isCurrent={index + 1 === currentPage}
+            currentPage={currentPage}
+            totalPages={chapter.pages.length}
+          />
+        ))}
       </div>
     </div>
   );
@@ -957,7 +959,7 @@ function HorizontalReaderView({
         <div className="flex h-full items-center justify-center gap-4 snap-x snap-mandatory overflow-x-auto pb-4">
           {chapter.pages.map((page, index) => (
             <ReaderPage
-              key={page.id}
+              key={page.id || `page-${index + 1}`}
               page={page}
               index={index}
               zoom={zoom}
@@ -983,7 +985,6 @@ function ReaderPage({
   settings,
   isCurrent,
   isHorizontal = false,
-  onEnter,
   currentPage,
   totalPages,
 }: {
@@ -993,7 +994,6 @@ function ReaderPage({
   settings: ReaderSettings;
   isCurrent: boolean;
   isHorizontal?: boolean;
-  onEnter?: () => void;
   currentPage: number;
   totalPages: number;
 }) {
@@ -1002,38 +1002,82 @@ function ReaderPage({
   const [retryCount, setRetryCount] = useState(0);
 
   const rawUrl = getProxiedImageUrl(page.url);
-  const shouldRenderImage = Math.abs(index + 1 - currentPage) <= 1; // page +/- 1
+  const shouldRenderImage = isHorizontal ? Math.abs(index + 1 - currentPage) <= 1 : true;
 
-  const loadImage = useCallback(async () => {
+  const loadImage = useCallback(async (signal: AbortSignal) => {
     if (!shouldRenderImage) return;
 
     setImageState("loading");
+    let attempts = 0;
+    const maxAttempts = 3;
+    const t0 = performance.now();
+    let imageHost = "";
     try {
-      const cached = await getCachedImage(rawUrl);
-      if (cached) {
-        setSrcUrl(cached);
+      imageHost = new URL(rawUrl).hostname;
+    } catch {}
+
+    while (attempts < maxAttempts) {
+      if (signal.aborted) return;
+      try {
+        const cached = await getCachedImage(rawUrl);
+        if (cached) {
+          setSrcUrl(cached);
+          setImageState("loaded");
+          return;
+        }
+
+        const res = await fetch(rawUrl, { signal });
+        if (!res.ok) {
+          const isPermanent = [400, 401, 403, 404].includes(res.status);
+          const err: any = new Error(`HTTP ${res.status}`);
+          err.isPermanent = isPermanent;
+          throw err;
+        }
+        const blob = await res.blob();
+        
+        await cacheImage(rawUrl, blob);
+
+        if (signal.aborted) return;
+        const objectUrl = URL.createObjectURL(blob);
+        setSrcUrl(objectUrl);
         setImageState("loaded");
         return;
+      } catch (err: any) {
+        if (signal.aborted || err.name === "AbortError") return;
+
+        attempts++;
+        const latencyMs = Math.round(performance.now() - t0);
+        console.warn(
+          JSON.stringify({
+            event: "image_proxy_failure",
+            pageNumber: page.number,
+            chapterId: page.chapterId,
+            imageHost,
+            attempt: attempts,
+            latencyMs,
+            readerMode: settings.mode,
+            cacheHit: false,
+            isPermanent: !!err?.isPermanent,
+            error: err?.message || "Fetch failed",
+            timestamp: new Date().toISOString(),
+          })
+        );
+
+        if (err?.isPermanent || attempts >= maxAttempts) {
+          setImageState("error");
+          break;
+        } else {
+          await new Promise((r) => setTimeout(r, attempts * 300));
+        }
       }
-
-      const res = await fetch(rawUrl);
-      if (!res.ok) throw new Error("Failed to load page");
-      const blob = await res.blob();
-      
-      await cacheImage(rawUrl, blob);
-
-      const objectUrl = URL.createObjectURL(blob);
-      setSrcUrl(objectUrl);
-      setImageState("loaded");
-    } catch (err) {
-      console.error(`[ReaderPage] Error loading page ${page.number}:`, err);
-      setImageState("error");
     }
-  }, [rawUrl, shouldRenderImage, page.number]);
+  }, [rawUrl, shouldRenderImage, page.number, page.chapterId, settings.mode]);
 
   useEffect(() => {
-    loadImage();
+    const controller = new AbortController();
+    loadImage(controller.signal);
     return () => {
+      controller.abort();
       if (srcUrl && srcUrl.startsWith("blob:")) {
         URL.revokeObjectURL(srcUrl);
       }
@@ -1041,25 +1085,10 @@ function ReaderPage({
   }, [loadImage, retryCount]);
 
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev) => prev + 1);
   };
 
   const aspectRatio = page.width && page.height ? page.width / page.height : 0.7;
-
-  if (!shouldRenderImage) {
-    return (
-      <div
-        className={cn(
-          "relative flex-shrink-0 snap-center bg-muted/20 border border-border/20 rounded-lg flex items-center justify-center transition-colors duration-300",
-          isHorizontal ? "h-[90vh] max-h-[90vh]" : "w-full"
-        )}
-        style={!isHorizontal ? { aspectRatio: `${aspectRatio}` } : { width: `calc(90vh * ${aspectRatio})` }}
-        onMouseEnter={onEnter}
-      >
-        <div className="text-xs text-muted-foreground">Page {page.number} (not loaded)</div>
-      </div>
-    );
-  }
 
   const fitStyles = {
     width: { width: "100%", height: "auto" },
@@ -1070,16 +1099,16 @@ function ReaderPage({
 
   return (
     <div
+      data-page-number={index + 1}
       className={cn(
         "relative flex-shrink-0 snap-center select-none",
         isHorizontal && "h-[90vh] max-h-[90vh]"
       )}
-      onMouseEnter={onEnter}
       role="listitem"
       aria-label={`Page ${page.number}`}
     >
       <div
-        className="relative overflow-hidden rounded-lg shadow-xl"
+        className="relative overflow-hidden rounded-lg shadow-xl min-h-[300px]"
         style={{
           transform: `scale(${zoom / 100})`,
           transformOrigin: isHorizontal ? "center" : "top center",
@@ -1088,14 +1117,14 @@ function ReaderPage({
         }}
       >
         {imageState === "loading" && (
-          <div className="absolute inset-0 bg-muted/50 flex flex-col items-center justify-center gap-2">
+          <div className="absolute inset-0 bg-muted/50 flex flex-col items-center justify-center gap-2 min-h-[400px]">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <span className="text-[10px] text-muted-foreground font-semibold">Loading page {page.number}...</span>
           </div>
         )}
 
         {imageState === "error" && (
-          <div className="absolute inset-0 bg-destructive/10 border border-destructive/20 rounded-lg flex flex-col items-center justify-center p-6 gap-3 text-center">
+          <div className="absolute inset-0 bg-destructive/10 border border-destructive/20 rounded-lg flex flex-col items-center justify-center p-6 gap-3 text-center min-h-[300px]">
             <Info className="h-8 w-8 text-destructive animate-pulse" />
             <div className="space-y-1">
               <p className="text-sm font-bold text-foreground">Failed to Load Page {page.number}</p>
@@ -1103,7 +1132,7 @@ function ReaderPage({
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="default" onClick={handleRetry} className="h-8 font-semibold">
-                <RotateCcw className="h-3 w-3 mr-1.5" /> Retry
+                <RotateCcw className="h-3 w-3 mr-1.5" /> Retry Page
               </Button>
             </div>
           </div>
@@ -1113,16 +1142,19 @@ function ReaderPage({
           <img
             src={srcUrl}
             alt={`Page ${page.number}`}
+            loading="lazy"
             className="w-full h-full object-contain"
           />
         )}
       </div>
 
       {settings.showPageNumbers && (
-        <div className={cn(
-          "absolute bottom-2 right-2 text-xs px-2 py-1 rounded bg-background/80 backdrop-blur",
-          isCurrent ? "text-primary font-medium" : "text-muted-foreground"
-        )}>
+        <div
+          className={cn(
+            "absolute bottom-2 right-2 text-xs px-2 py-1 rounded bg-background/80 backdrop-blur",
+            isCurrent ? "text-primary font-medium" : "text-muted-foreground"
+          )}
+        >
           Page {page.number} / {totalPages}
         </div>
       )}

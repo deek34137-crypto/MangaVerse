@@ -7,6 +7,8 @@ import { snapshotStorage } from "./snapshot-engine";
 import { refreshQueue } from "./refresh-queue";
 import { recommendationEngine } from "./recommendation-engine";
 
+import { acquireLock, releaseLock } from "@/lib/lock";
+
 export class AggregatorFacade {
   private pipeline: AggregationPipeline;
 
@@ -38,8 +40,18 @@ export class AggregatorFacade {
   }
 
   public async refresh(canonicalId: string): Promise<CanonicalManga | null> {
-    await this.pipeline.invalidateCache(canonicalId);
-    return this.getManga(canonicalId);
+    const lockKey = `agg:refresh:${canonicalId}`;
+    const locked = await acquireLock(lockKey, 30);
+    if (!locked) {
+      const existing = await this.getManga(canonicalId);
+      if (existing) return existing;
+    }
+    try {
+      await this.pipeline.invalidateCache(canonicalId);
+      return await this.getManga(canonicalId);
+    } finally {
+      if (locked) await releaseLock(lockKey);
+    }
   }
 
   public async invalidate(canonicalId: string): Promise<string[]> {

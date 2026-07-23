@@ -91,7 +91,7 @@ export default async function MangaDetailPage({ params }: { params: Promise<{ id
               {viewModel.chapters.map((ch) => (
                 <a
                   key={ch.chapterId}
-                  href={`/read/${ch.chapterId}`}
+                  href={`/manga/${viewModel.canonicalId}/chapter/${ch.chapterId}`}
                   className="flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 transition group"
                 >
                   <div>

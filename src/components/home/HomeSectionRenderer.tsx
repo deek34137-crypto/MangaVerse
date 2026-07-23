@@ -19,8 +19,8 @@ export function HomeSectionRenderer({ section, index = 0 }: HomeSectionRendererP
 
   return (
     <SectionErrorBoundary fallback={<div className="h-16" />}>
-      {/* Hero is full-bleed; all other sections are padded */}
-      <div className={isHero ? "" : "container-padded mb-12"}>
+      {/* Hero is full-bleed; all other sections are padded with 64px print rhythm */}
+      <div className={isHero ? "" : "container-padded mb-16"}>
         {(() => {
           switch (section.type) {
             case "hero": {

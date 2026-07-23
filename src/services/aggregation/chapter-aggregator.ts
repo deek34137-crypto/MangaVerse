@@ -94,21 +94,38 @@ export function aggregateChapters(
   });
 
   // Convert map to CanonicalChapter array and sort by key
+  const now = new Date().toISOString();
   const canonicalChapters: CanonicalChapter[] = Array.from(chapterMap.entries())
     .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
     .map(([keyStr, data]) => {
-      // Sort sources within chapter by sourceScore descending
-      const sortedSources = [...data.sources].sort((a, b) => b.sourceScore - a.sourceScore);
+      // Deduplicate and sort sources within chapter by sourceScore descending
+      const uniqueSourcesMap = new Map<string, ChapterSource>();
+      data.sources.forEach((src) => {
+        const srcKey = `${src.providerId}:${src.providerChapterId}`;
+        if (!uniqueSourcesMap.has(srcKey)) {
+          uniqueSourcesMap.set(srcKey, src);
+        }
+      });
+
+      const sortedSources = Array.from(uniqueSourcesMap.values()).sort((a, b) => b.sourceScore - a.sourceScore);
+      const providerIds = Array.from(new Set(sortedSources.map((s) => s.providerId)));
       const chHash = crypto.createHash("md5").update(`${canonicalMangaId}:${keyStr}`).digest("hex").slice(0, 12);
+      const chapterId = `cch_${chHash}`;
       const traceId = `trace_ch_${chHash}`;
 
       return {
-        id: `cch_${chHash}`,
+        id: chapterId,
+        canonicalChapterId: chapterId,
         aggregationVersion: AGGREGATION_VERSION,
         canonicalMangaId,
+        chapterNumber: data.key.chapter,
         key: data.key,
         title: data.title,
         sources: sortedSources,
+        providerIds,
+        releasedAt: sortedSources[0]?.publishedAt || now,
+        updatedAt: now,
+        lastValidated: now,
         traceId,
       };
     });

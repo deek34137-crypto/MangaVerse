@@ -1,12 +1,14 @@
 import { CanonicalManga } from "../aggregation/types";
-import { formatRatingLabel, formatRelativeDate } from "./shared/formatters";
+import { formatRatingLabel } from "./shared/formatters";
 import { uiSectionConfig } from "@/config/ui-sections";
+import { getProxiedImageUrl } from "@/lib/utils";
 
 export interface MangaCardViewModel {
   canonicalId: string;
   title: string;
   coverImage: string;
   ratingLabel: string;
+  rating?: number | null;
   latestChapterLabel: string;
   statusLabel: string;
   qualityTier: string;
@@ -37,12 +39,16 @@ export interface HomeErrorViewModel {
 export type HomeResultViewModel = HomeViewModel | HomeErrorViewModel;
 
 export function toMangaCardViewModel(manga: CanonicalManga): MangaCardViewModel {
+  const rawRating = manga.rating != null ? parseFloat(String(manga.rating)) : 0;
+  const validRating = rawRating > 0 ? rawRating : null;
+
   return {
     canonicalId: manga.canonicalId,
     title: manga.title.value,
-    coverImage: manga.coverImage?.value || "/placeholders/cover.jpg",
-    ratingLabel: formatRatingLabel(manga.rating),
-    latestChapterLabel: "Latest Chapter",
+    coverImage: getProxiedImageUrl(manga.coverImage?.value || ""),
+    ratingLabel: formatRatingLabel(validRating),
+    rating: validRating,
+    latestChapterLabel: "Chapter 1",
     statusLabel: manga.status?.value || "ONGOING",
     qualityTier: manga.qualityTier || "TIER_A_PRODUCTION",
     genres: (manga.genres?.value || []).slice(0, 3),

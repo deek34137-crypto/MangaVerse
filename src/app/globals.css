@@ -115,10 +115,22 @@
   --gradient-primary-accent: none;
 
   /* Spacing Scale (section rhythm) */
-  --spacing-hero: 64px;
-  --spacing-section: 48px;
-  --spacing-group: 32px;
+  --spacing-hero: 72px;
+  --spacing-section: 64px;
+  --spacing-group: 48px;
   --spacing-inner: 24px;
+
+  /* ─── Elevation Surface Tokens (Inkline 2.2.1) ───────────────────────────── */
+  --surface-0: #0B0B0C;
+  --surface-1: #151517;
+  --surface-2: rgba(21, 21, 23, 0.78);
+  --surface-3: rgba(21, 21, 23, 0.88);
+  --surface-4: rgba(11, 11, 12, 0.95);
+
+  /* ─── Inkline 2.2.1 Radius Scale ─────────────────────────────────────────── */
+  --radius-card: 14px;
+  --radius-btn: 10px;
+  --radius-modal: 18px;
 }
 
 /* ─── Light / Paper Mode Overrides ───────────────────────────────────────────── */
@@ -504,8 +516,8 @@ body::before {
 
 .glass-nav {
   background-color: color-mix(in srgb, var(--color-background) 85%, transparent);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
@@ -694,6 +706,37 @@ body::before {
 .section-divider-dashed {
   border-bottom: 3px dashed var(--color-border);
   margin: 2rem 0;
+}
+
+/* ─── Inkline 2.2.1 Editorial Primitives ──────────────────────────────────── */
+.section-overtitle {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--color-ink-400);
+}
+
+.ch-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-400);
+}
+
+.divider-clean {
+  border-bottom: 1px solid var(--color-ink-700);
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.divider-bullet::after {
+  content: "•";
+  margin-left: 0.5rem;
+  color: var(--color-vermilion-500);
 }
 
 /* ─── Gradient Animated Background ───────────────────────────────────────────── */

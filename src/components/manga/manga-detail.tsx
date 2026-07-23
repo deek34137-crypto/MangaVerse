@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { cn, formatNumber, formatRelativeTime, formatDate, getProxiedImageUrl } from "@/lib/utils";
+import { cn, formatNumber, formatRelativeTime, formatDate, getProxiedImageUrl, formatChapterLabel } from "@/lib/utils";
 import { Reader } from "@/components/reader/reader";
 import { MangaCarousel } from "@/components/home/MangaCarousel";
 import { useChapterDetail } from "@/hooks/use-chapter-detail";
@@ -589,7 +589,7 @@ function ChapterRow({
       className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors text-left"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="text-muted-foreground font-mono text-sm w-16">Ch. {chapter.number}</div>
+        <div className="ch-label text-ink-300 w-20 flex-shrink-0">{formatChapterLabel(chapter.number)}</div>
         <div className="min-w-0">
           <p className="font-medium text-foreground truncate">
             {chapter.title || `Chapter ${chapter.number}`}

@@ -9,7 +9,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn, formatNumber, formatRelativeTime, getProxiedImageUrl } from "@/lib/utils";
+import { cn, formatNumber, formatRelativeTime, getProxiedImageUrl, formatChapterLabel } from "@/lib/utils";
 import type { Manga, LibraryStatus } from "@/types";
 
 /* ─── Status config ──────────────────────────────────────────────────────── */
@@ -52,6 +52,8 @@ export function MangaCard({
 }: MangaCardProps) {
   const [hovered, setHovered] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const isCompact  = variant === "compact";
   const isFeatured = variant === "featured";
@@ -64,7 +66,8 @@ export function MangaCard({
     setTimeout(() => setAddedFeedback(false), 1500);
   };
 
-  const rating = manga.rating != null ? parseFloat(String(manga.rating)) : null;
+  const rawRating = manga.rating != null ? parseFloat(String(manga.rating)) : 0;
+  const validRating = rawRating > 0 ? rawRating : null;
 
   /* ── Widths by variant ── */
   const wClass = isCompact ? "w-28 sm:w-32" : isFeatured ? "w-48 sm:w-56" : "w-36 sm:w-40 md:w-44";
@@ -85,20 +88,33 @@ export function MangaCard({
       >
         <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-ink-900 border border-ink-800 group-hover:border-primary/40 group-hover:shadow-lg transition-all duration-200">
 
+          {/* Shimmer loading overlay */}
+          {!imageLoaded && !imageError && (
+            <div className="absolute inset-0 z-10 loading-shimmer" />
+          )}
+
           {/* Cover */}
-          {manga.coverImage ? (
+          {manga.coverImage && !imageError ? (
             <Image
               src={getProxiedImageUrl(manga.coverImage)}
               alt={manga.title}
               fill
-              className="object-cover transition-transform duration-300 ease-out group-hover:scale-105"
+              className={cn(
+                "object-cover transition-all duration-300 ease-out group-hover:scale-105",
+                !imageLoaded && "opacity-0 scale-95"
+              )}
               loading={priority ? "eager" : "lazy"}
               sizes={isFeatured ? "224px" : isCompact ? "128px" : "176px"}
               quality={80}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-ink-900 to-ink-850">
-              <BookOpen className="h-6 w-6 text-ink-500" aria-hidden="true" />
+            <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-gradient-to-br from-ink-900 via-ink-850 to-ink-950">
+              <BookOpen className="h-7 w-7 text-primary/60 mb-2" aria-hidden="true" />
+              <span className="text-[10px] font-semibold text-ink-300 line-clamp-2 leading-tight px-1">
+                {manga.title}
+              </span>
             </div>
           )}
 
@@ -213,29 +229,29 @@ export function MangaCard({
             </Link>
 
             <div className="flex items-center gap-1.5 text-[10px] text-ink-400">
-              {rating != null && (
+              {validRating != null && (
                 <span className="flex items-center gap-0.5">
                   <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                  <span className="font-semibold text-foreground/90">{rating.toFixed(1)}</span>
+                  <span className="font-semibold text-foreground/90">{validRating.toFixed(1)}</span>
                 </span>
               )}
-              {rating != null && manga.chapterCount != null && manga.chapterCount > 0 && (
+              {validRating != null && manga.chapterCount != null && manga.chapterCount > 0 && (
                 <span className="text-ink-600/60">•</span>
               )}
               {manga.chapterCount != null && manga.chapterCount > 0 && (
-                <span className="font-medium">
-                  {manga.chapterCount} Chs
+                <span className="ch-label">
+                  {formatChapterLabel(manga.chapterCount)}
                 </span>
               )}
             </div>
           </div>
 
           {manga.latestChapter && (
-            <p className="text-[10px] text-ink-400/70 flex items-center gap-1 mt-1 pt-1 border-t border-ink-800/40 truncate w-full">
+            <p className="text-[10px] text-ink-400 flex items-center gap-1 mt-1 pt-1 border-t border-ink-800/40 truncate w-full">
               <Clock className="h-3 w-3 flex-shrink-0 text-ink-500" />
-              <span className="truncate">Ch.{manga.latestChapter.number}</span>
+              <span className="ch-label text-ink-300 truncate">{formatChapterLabel(manga.latestChapter.number)}</span>
               {manga.latestChapter.publishedAt && (
-                <span className="ml-auto flex-shrink-0 text-ink-500">{formatRelativeTime(new Date(manga.latestChapter.publishedAt))}</span>
+                <span className="ml-auto flex-shrink-0 text-[10px] text-ink-500 font-mono">{formatRelativeTime(new Date(manga.latestChapter.publishedAt))}</span>
               )}
             </p>
           )}

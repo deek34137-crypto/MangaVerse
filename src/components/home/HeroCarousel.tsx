@@ -7,7 +7,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from
 import Image from "next/image";
 import Link from "next/link";
 import { Star, BookOpen, ArrowRight, Play, Pause, Eye } from "lucide-react";
-import { cn, formatNumber, getProxiedImageUrl } from "@/lib/utils";
+import { cn, formatNumber, getProxiedImageUrl, formatChapterLabel } from "@/lib/utils";
 import type { Manga } from "@/types";
 
 interface HeroCarouselProps {
@@ -289,7 +289,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.45, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-wrap items-center gap-3"
+                className="flex flex-wrap items-center gap-3 mb-6"
               >
                 <Link href={`/manga/${manga.id}`}>
                   <motion.button
@@ -313,6 +313,43 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 </Link>
               </motion.div>
             </AnimatePresence>
+
+            {/* Prominent Hero Search Anchor */}
+            <div className="mb-4 max-w-xl">
+              <Link href="/search" className="block">
+                <div className="flex items-center justify-between w-full h-11 px-4 rounded-xl bg-ink-900/80 border border-ink-700/80 hover:border-primary/50 text-ink-300 text-xs transition-all shadow-md backdrop-blur-md cursor-pointer group">
+                  <div className="flex items-center gap-2.5">
+                    <svg className="h-4 w-4 text-ink-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span className="font-medium text-ink-300">Search manga titles, authors, or genres...</span>
+                  </div>
+                  <kbd className="hidden sm:inline-flex items-center rounded border border-ink-700 px-2 py-0.5 text-[10px] font-mono text-ink-400">
+                    ⌘K
+                  </kbd>
+                </div>
+              </Link>
+            </div>
+
+            {/* Curated 8 Genre Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 max-w-xl">
+              {[
+                { label: "Action", href: "/genres/action" },
+                { label: "Fantasy", href: "/genres/fantasy" },
+                { label: "Romance", href: "/genres/romance" },
+                { label: "Comedy", href: "/genres/comedy" },
+                { label: "Drama", href: "/genres/drama" },
+                { label: "Manhwa", href: "/search?type=manhwa" },
+                { label: "Completed", href: "/search?status=completed" },
+                { label: "Top Rated", href: "/search?sortBy=rating" },
+              ].map((chip) => (
+                <Link key={chip.label} href={chip.href}>
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-ink-900/50 hover:bg-primary/20 text-ink-300 hover:text-primary border border-ink-800/60 hover:border-primary/40 transition-all cursor-pointer">
+                    {chip.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
 
           {/* Right — Floating Artwork composition (5 cols) */}

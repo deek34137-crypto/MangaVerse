@@ -61,7 +61,7 @@ class PartitionedStorageManager {
     return this.dbPromise;
   }
 
-  // ── Session Store API with Migration ─────────────────────────────────────
+  // ── Session Store API with Migration & Server Sync ───────────────────────
   public async saveSession(session: Omit<ReaderSessionRecord, "version"> & { version?: "1.0.0" }): Promise<void> {
     const fullRecord: ReaderSessionRecord = {
       version: "1.0.0",
@@ -78,6 +78,64 @@ class PartitionedStorageManager {
       } catch {
         // Ignore
       }
+    }
+
+    // Sync to server if online
+    if (typeof window !== "undefined" && navigator.onLine) {
+      this.syncSessionToServer(fullRecord).catch(() => {});
+    }
+  }
+
+  public async syncSessionToServer(record: ReaderSessionRecord): Promise<boolean> {
+    try {
+      const res = await fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mangaId: record.mangaId,
+          chapterId: record.chapterId,
+          pageNumber: record.pageNumber,
+          scrollOffset: record.scrollOffset,
+          readingMode: record.readingMode,
+          updatedAt: record.updatedAt,
+        }),
+      });
+      return res.ok;
+    } catch (err) {
+      console.warn("[StorageManager] Server sync postponed (offline or unauthorized):", err);
+      return false;
+    }
+  }
+
+  public async syncOfflineSessionsToServer(): Promise<number> {
+    if (typeof window === "undefined" || !navigator.onLine) return 0;
+
+    let syncedCount = 0;
+    try {
+      const db = await this.getDB();
+      const records = await new Promise<ReaderSessionRecord[]>((resolve) => {
+        const tx = db.transaction("sessions", "readonly");
+        const req = tx.objectStore("sessions").getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      });
+
+      for (const rec of records) {
+        const success = await this.syncSessionToServer(rec);
+        if (success) syncedCount++;
+      }
+    } catch (err) {
+      console.error("[StorageManager] Error flushing offline sessions:", err);
+    }
+    return syncedCount;
+  }
+
+  public initOnlineSyncListener(): void {
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => {
+        console.log("[StorageManager] Network online event detected — flushing queued reading progress...");
+        this.syncOfflineSessionsToServer();
+      });
     }
   }
 
@@ -175,3 +233,7 @@ class PartitionedStorageManager {
 }
 
 export const readerStorage = new PartitionedStorageManager();
+if (typeof window !== "undefined") {
+  readerStorage.initOnlineSyncListener();
+}
+
