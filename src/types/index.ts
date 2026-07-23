@@ -1,5 +1,6 @@
 export interface Manga {
   id: string;
+  slug?: string;
   title: string;
   altTitles: string[];
   description: string;

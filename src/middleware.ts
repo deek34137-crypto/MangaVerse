@@ -37,18 +37,22 @@ const middlewareHandler = auth(async (req) => {
     response = NextResponse.next();
   }
 
+  // Security Headers
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+
   response.headers.set("X-Response-Time", `${Date.now() - startTime}ms`);
   return response;
 });
 
 export const config = {
   matcher: [
-    "/library/:path*",
-    "/history/:path*",
-    "/recommendations/:path*",
-    "/settings/:path*",
-    "/login",
-    "/register",
+    "/((?!_next/static|_next/image|favicon.ico|apple-icon.svg|icon.svg|placeholders).*)",
   ],
 };
 

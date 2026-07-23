@@ -130,6 +130,16 @@ export const manga = pgTable("manga", {
   viewCountIdx: index("manga_view_count_idx").on(table.viewCount),
 }));
 
+export const slugHistory = pgTable("slug_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  mangaId: uuid("manga_id").notNull().references(() => manga.id, { onDelete: "cascade" }),
+  oldSlug: varchar("old_slug", { length: 500 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  oldSlugIdx: uniqueIndex("slug_history_old_slug_idx").on(table.oldSlug),
+  mangaIdIdx: index("slug_history_manga_id_idx").on(table.mangaId),
+}));
+
 export const genres = pgTable("genres", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 100 }).notNull().unique(),

@@ -24,6 +24,16 @@ import { FloatingPanel } from "@/components/ui/FloatingPanel";
 import { Drawer } from "@/components/ui/Drawer";
 import type { Chapter, Manga } from "@/types";
  
+export type ReaderState =
+  | "IDLE"
+  | "LOADING_METADATA"
+  | "RESOLVING_PROVIDER"
+  | "LOADING_PAGES"
+  | "RENDERING"
+  | "PREFETCHING"
+  | "COMPLETED"
+  | "ERROR";
+
 interface ReaderProps {
   manga: Manga;
   chapter: Chapter;

@@ -1,8 +1,9 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { ChapterReaderWrapper } from "@/components/reader/ChapterReaderWrapper";
 import { getMangaDetail, getChapterDetail, getChaptersDetail } from "@/services/manga";
+import { isUuid } from "@/lib/url";
 
 interface ChapterPageProps {
   params: Promise<{ id: string; chapterId: string }>;
@@ -56,6 +57,12 @@ export default async function ChapterPage({ params }: ChapterPageProps) {
   if (!chapter) {
     console.warn(`[ChapterPage] Chapter ${chapterId} not found for manga ${id} (took ${(performance.now() - t0).toFixed(1)}ms)`);
     notFound();
+  }
+
+  // Canonical 301 Redirect: If URL accessed via raw UUID when canonical slug exists, redirect to canonical slug URL
+  if (manga.slug && isUuid(id)) {
+    const targetChapterNum = chapter.number != null ? chapter.number : chapterId;
+    redirect(`/manga/${manga.slug}/chapter/${targetChapterNum}`);
   }
 
   const chapters = await getChaptersDetail(id);

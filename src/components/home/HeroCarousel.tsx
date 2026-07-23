@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, BookOpen, ArrowRight, Play, Pause, Eye } from "lucide-react";
 import { cn, formatNumber, getProxiedImageUrl, formatChapterLabel } from "@/lib/utils";
+import { getMangaUrl, getChapterUrl, getGenreUrl } from "@/lib/url";
 import type { Manga } from "@/types";
 
 interface HeroCarouselProps {
@@ -253,13 +254,13 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 transition={{ duration: 0.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
                 className="flex flex-wrap items-center gap-3 mb-6"
               >
-                {manga.rating && (
+                {Boolean(manga.rating && parseFloat(String(manga.rating)) > 0) && (
                   <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ink-900/60 border border-ink-800/40 text-xs font-semibold text-foreground">
                     <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
                     <span>{parseFloat(String(manga.rating)).toFixed(1)}</span>
                   </span>
                 )}
-                {manga.viewCount && (
+                {Boolean(manga.viewCount && manga.viewCount > 0) && (
                   <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ink-900/60 border border-ink-800/40 text-xs text-ink-300">
                     <Eye className="h-3.5 w-3.5" />
                     <span>{formatNumber(manga.viewCount)} views</span>
@@ -291,7 +292,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 transition={{ duration: 0.45, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 className="flex flex-wrap items-center gap-3 mb-6"
               >
-                <Link href={`/manga/${manga.id}`}>
+                <Link href={getChapterUrl(manga, 1)}>
                   <motion.button
                     className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-md hover:bg-primary/90 transition-all cursor-pointer"
                     whileHover={{ scale: 1.02 }}
@@ -302,7 +303,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </motion.button>
                 </Link>
-                <Link href={`/manga/${manga.id}`}>
+                <Link href={getMangaUrl(manga)}>
                   <motion.button
                     className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-ink-900/60 border border-ink-700/60 text-foreground font-medium text-sm hover:bg-ink-800/80 transition-all cursor-pointer"
                     whileHover={{ scale: 1.02 }}

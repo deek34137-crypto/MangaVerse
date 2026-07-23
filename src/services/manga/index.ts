@@ -126,7 +126,11 @@ export async function getMangaDetail(idOrSlug: string): Promise<any | null> {
  * Fetch all chapters for a manga.
  * For each chapter, joins and selects the highest-priority provider link.
  */
-export async function getChaptersDetail(mangaId: string): Promise<any[]> {
+export async function getChaptersDetail(mangaIdOrSlug: string): Promise<any[]> {
+  const manga = await getMangaDetail(mangaIdOrSlug);
+  if (!manga) return [];
+  const mangaId = manga.id;
+
   const cacheKey = `manga:chapters:${mangaId}`;
   const cached = await cacheGet<any[]>(cacheKey);
   if (cached && cached.length > 0) {
@@ -228,28 +232,49 @@ export async function getChaptersDetail(mangaId: string): Promise<any[]> {
  * Fetch a specific chapter with page images.
  * If pages are missing, triggers on-demand sync from the provider.
  */
-export async function getChapterDetail(mangaId: string, chapterId: string): Promise<any | null> {
-  const cacheKey = `chapter:detail:${chapterId}`;
+export async function getChapterDetail(mangaIdOrSlug: string, chapterIdOrNumber: string): Promise<any | null> {
+  const manga = await getMangaDetail(mangaIdOrSlug);
+  if (!manga) {
+    console.warn(`[ReaderTrace] Manga not found for identifier "${mangaIdOrSlug}"`);
+    return null;
+  }
+  const mangaId = manga.id;
+
+  const cacheKey = `chapter:detail:${mangaId}:${chapterIdOrNumber}`;
   const cached = await cacheGet<any>(cacheKey);
   if (cached && cached.pages && cached.pages.length > 0) {
     return cached;
   }
 
   const tStart = performance.now();
-  console.log(`[ReaderTrace] Requested chapter: mangaId=${mangaId} chapterId=${chapterId}`);
+  console.log(`[ReaderTrace] Requested chapter: mangaId=${mangaId} (${manga.title}) chapterIdOrNumber=${chapterIdOrNumber}`);
 
   const fetchFromDb = async () => {
-    const chapterData = await db
-      .select()
-      .from(chaptersTable)
-      .where(and(eq(chaptersTable.id, chapterId), eq(chaptersTable.mangaId, mangaId)))
-      .limit(1);
+    let chapterData = isUuid(chapterIdOrNumber)
+      ? await db
+          .select()
+          .from(chaptersTable)
+          .where(and(eq(chaptersTable.id, chapterIdOrNumber), eq(chaptersTable.mangaId, mangaId)))
+          .limit(1)
+      : await db
+          .select()
+          .from(chaptersTable)
+          .where(and(or(eq(chaptersTable.number, chapterIdOrNumber), eq(chaptersTable.id, chapterIdOrNumber)), eq(chaptersTable.mangaId, mangaId)))
+          .limit(1);
+
+    if (chapterData.length === 0 && !isNaN(parseFloat(chapterIdOrNumber))) {
+      const allChapters = await db.select().from(chaptersTable).where(eq(chaptersTable.mangaId, mangaId));
+      const targetNum = parseFloat(chapterIdOrNumber);
+      const match = allChapters.find((c) => c.number != null && parseFloat(c.number) === targetNum);
+      if (match) chapterData = [match];
+    }
 
     if (chapterData.length === 0) {
-      console.warn(`[ReaderTrace] Chapter ID ${chapterId} not found in database for manga ${mangaId}`);
+      console.warn(`[ReaderTrace] Chapter ${chapterIdOrNumber} not found in database for manga ${mangaId}`);
       return null;
     }
     const chapter = chapterData[0];
+    const chapterId = chapter.id;
     console.log(`[ReaderTrace] Found chapter ${chapter.number} ("${chapter.title}")`);
 
     // Fetch provider links for this chapter

@@ -1,112 +1,104 @@
 import React from "react";
-import { loadMangaDetailPage } from "@/services/ui/loaders/manga.loader";
+import { redirect } from "next/navigation";
+import { getMangaDetail, getChaptersDetail } from "@/services/manga";
+import { MangaDetail } from "@/components/manga/manga-detail";
+import { isUuid } from "@/lib/url";
+import type { Manga, Chapter } from "@/types";
 
 export default async function MangaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
-  const viewModel = await loadMangaDetailPage(resolvedParams.id);
+  const mangaIdOrSlug = resolvedParams.id;
 
-  if (viewModel.type === "ERROR") {
+  const [mangaData, chaptersData] = await Promise.all([
+    getMangaDetail(mangaIdOrSlug),
+    getChaptersDetail(mangaIdOrSlug),
+  ]);
+
+  if (!mangaData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-6">
-        <div className="max-w-md text-center bg-slate-900 border border-slate-800 p-8 rounded-xl">
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
+        <div className="max-w-md text-center bg-card border border-border p-8 rounded-2xl shadow-xl">
           <span className="text-4xl mb-4 block">🔍</span>
-          <h2 className="text-xl font-bold mb-2">Manga Not Found</h2>
-          <p className="text-slate-400 text-sm mb-6">{viewModel.errorMessage}</p>
-          <a href="/" className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold text-sm">
-            {viewModel.retryActionText}
+          <h2 className="text-xl font-bold font-display mb-2 text-foreground">Manga Not Found</h2>
+          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
+            The requested manga series could not be found or has been removed from the canonical index.
+          </p>
+          <a href="/search" className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl transition inline-block">
+            Browse Manga Catalog
           </a>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
-      {/* Hero Backdrop Banner */}
-      <div className="relative h-80 w-full overflow-hidden">
-        <img src={viewModel.bannerImage} alt="Banner" className="w-full h-full object-cover blur-sm opacity-30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-      </div>
+  // Canonical 301 Redirect: If URL accesses via UUID or historic slug when canonical slug exists, redirect to canonical slug
+  if (mangaData.slug && (isUuid(mangaIdOrSlug) || mangaIdOrSlug !== mangaData.slug)) {
+    redirect(`/manga/${mangaData.slug}`);
+  }
 
-      <div className="max-w-6xl mx-auto px-6 -mt-40 relative z-10">
-        <div className="flex flex-col md:flex-row gap-8 items-start">
-          {/* Cover Image */}
-          <div className="w-56 h-80 rounded-xl overflow-hidden shadow-2xl border border-white/10 flex-shrink-0">
-            <img src={viewModel.coverImage} alt={viewModel.title} className="w-full h-full object-cover" />
-          </div>
+  // Transform DB data to UI Manga model
+  const manga: Manga = {
+    id: mangaData.id,
+    slug: mangaData.slug || mangaData.id,
+    title: mangaData.title,
+    altTitles: mangaData.altTitles || [],
+    description: mangaData.description || "No synopsis available for this title.",
+    coverImage: mangaData.coverImage || "/placeholders/cover.jpg",
+    bannerImage: mangaData.bannerImage || mangaData.coverImage || "/placeholders/banner.jpg",
+    status: (mangaData.status?.toLowerCase() as any) || "ongoing",
+    type: (mangaData.type?.toLowerCase() as any) || "manga",
+    genres: (mangaData.genres || []).map((g: any) => ({
+      id: g.id || g.slug,
+      name: g.name,
+      slug: g.slug,
+      mangaCount: 0,
+    })),
+    tags: (mangaData.tags || []).map((t: any) => ({
+      id: t.id || t.slug,
+      name: t.name,
+      slug: t.slug,
+      group: t.group || "general",
+    })),
+    authors: (mangaData.authors || []).map((a: any) => ({
+      id: a.id || a.slug,
+      name: a.name,
+      slug: a.slug,
+      image: a.image,
+    })),
+    artists: (mangaData.artists || []).map((a: any) => ({
+      id: a.id || a.slug,
+      name: a.name,
+      slug: a.slug,
+      image: a.image,
+    })),
+    demographic: mangaData.demographic || "shounen",
+    rating: mangaData.rating ? parseFloat(String(mangaData.rating)) : 0,
+    ratingCount: mangaData.ratingCount || 0,
+    followCount: mangaData.followCount || 0,
+    viewCount: mangaData.viewCount || 0,
+    chapterCount: chaptersData.length || mangaData.chapterCount || 0,
+    volumeCount: mangaData.volumeCount || 0,
+    createdAt: mangaData.createdAt ? new Date(mangaData.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: mangaData.updatedAt ? new Date(mangaData.updatedAt).toISOString() : new Date().toISOString(),
+  };
 
-          {/* Details */}
-          <div className="flex-1 space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                {viewModel.statusLabel}
-              </span>
-              {viewModel.showRating && (
-                <span className="px-3 py-1 text-xs font-bold rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  {viewModel.ratingLabel}
-                </span>
-              )}
-            </div>
+  const chapters: Chapter[] = (chaptersData || []).map((ch: any) => ({
+    id: ch.id,
+    mangaId: ch.mangaId,
+    number: ch.number != null ? parseFloat(String(ch.number)) : 1,
+    volume: ch.volume,
+    type: ch.type || "chapter",
+    title: ch.title || (ch.number ? `Chapter ${ch.number}` : "Special"),
+    language: ch.language || "en",
+    pages: ch.pages || [],
+    pageCount: ch.pageCount || (ch.pages?.length ?? 0),
+    publishedAt: ch.publishedAt ? new Date(ch.publishedAt).toISOString() : new Date().toISOString(),
+    createdAt: ch.createdAt ? new Date(ch.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: ch.updatedAt ? new Date(ch.updatedAt).toISOString() : new Date().toISOString(),
+    scanlatorGroups: ch.scanlatorGroups || [],
+    provider: ch.provider || "mangadex",
+    providerChapterId: ch.providerChapterId || ch.id,
+  }));
 
-            <h1 className="text-3xl font-extrabold text-white">{viewModel.title}</h1>
-            {viewModel.showAuthors && <p className="text-sm text-slate-400">By {viewModel.authorsLabel}</p>}
-
-            <div className="flex flex-wrap gap-2 pt-2">
-              {viewModel.genres.map((g) => (
-                <span key={g} className="px-2.5 py-1 text-xs rounded-md bg-slate-800 text-slate-300">
-                  {g}
-                </span>
-              ))}
-            </div>
-
-            <p className="text-sm text-slate-300 leading-relaxed pt-2 line-clamp-4">{viewModel.description}</p>
-          </div>
-        </div>
-
-        {/* Provider Availability Matrix */}
-        {viewModel.showProviderMatrix && (
-          <section className="mt-12 bg-slate-900/60 border border-slate-800 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Provider Source Matrix</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {viewModel.providerMatrix.map((item) => (
-                <div key={item.providerId} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/80 border border-slate-700">
-                  <span className="text-xs font-bold">{item.name}</span>
-                  <span className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${item.badge.colorClass}`}>
-                    ✓ Available
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Chapter List */}
-        {viewModel.showChapters && (
-          <section className="mt-12">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Chapters ({viewModel.totalChapters})</h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {viewModel.chapters.map((ch) => (
-                <a
-                  key={ch.chapterId}
-                  href={`/manga/${viewModel.canonicalId}/chapter/${ch.chapterId}`}
-                  className="flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 transition group"
-                >
-                  <div>
-                    <h4 className="text-sm font-bold group-hover:text-indigo-400 transition">{ch.chapterLabel}</h4>
-                    <p className="text-xs text-slate-500">{ch.releasedAtLabel}</p>
-                  </div>
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-slate-400">
-                    Read ▶
-                  </span>
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
-      </div>
-    </div>
-  );
+  return <MangaDetail manga={manga} chapters={chapters} />;
 }

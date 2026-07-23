@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn, formatNumber, formatRelativeTime, getProxiedImageUrl, formatChapterLabel } from "@/lib/utils";
+import { getMangaUrl } from "@/lib/url";
 import type { Manga, LibraryStatus } from "@/types";
 
 /* ─── Status config ──────────────────────────────────────────────────────── */
@@ -82,7 +83,7 @@ export function MangaCard({
     >
       {/* ── Cover image ── */}
       <Link
-        href={`/manga/${manga.id}`}
+        href={getMangaUrl(manga)}
         className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
         aria-label={`View ${manga.title}`}
       >
