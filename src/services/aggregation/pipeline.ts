@@ -129,7 +129,13 @@ export class AggregationPipeline {
     metricsCollector.recordRequest(false);
     // Search fallback to resolve canonical ID
     const searchRes = await this.executeSearch("", 50);
-    const found = searchRes.find((c) => c.canonicalId === canonicalId);
+    const targetNorm = canonicalId.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    const found = searchRes.find((c) => {
+      if (c.canonicalId === canonicalId) return true;
+      const titleNorm = c.title.value.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return titleNorm === targetNorm || c.canonicalId.replace(/[^a-z0-9]/g, "") === targetNorm;
+    });
+
     if (found) {
       await snapshotStorage.saveMangaSnapshot(found);
       return found;

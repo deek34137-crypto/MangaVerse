@@ -22,7 +22,7 @@ function AnimatedTitle({ title, animationKey }: { title: string; animationKey: s
   return (
     <h1
       key={animationKey}
-      className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-foreground mb-4 leading-[1.1]"
+      className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-3 leading-[1.1]"
       aria-label={title}
     >
       {words.map((word, i) => (
@@ -143,7 +143,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
 
   return (
     <section
-      className={cn("relative min-h-[420px] sm:min-h-[500px] lg:h-[80vh] lg:min-h-[600px] max-h-[850px] overflow-hidden bg-background select-none py-6 lg:py-0", className)}
+      className={cn("relative min-h-[580px] lg:min-h-[660px] overflow-hidden bg-background select-none py-6 lg:py-0", className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onKeyDown={handleKey}
@@ -191,7 +191,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
       />
  
       {/* ── Main content layout ── */}
-      <div className="relative z-20 h-full container-padded flex items-center pt-20 pb-12">
+      <div className="relative z-20 h-full container-padded flex items-center pt-24 pb-20 lg:pt-28 lg:pb-24">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center w-full">
 
           {/* Left — text metadata & CTAs (7 cols) */}
@@ -204,7 +204,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
-                className="mb-4 flex flex-wrap items-center gap-2"
+                className="mb-3 flex flex-wrap items-center gap-2"
               >
                 <span className="magazine-label">
                   <Star className="h-3 w-3 mr-1 fill-primary-foreground" />
@@ -237,7 +237,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                  className="text-ink-200 text-sm mb-5 line-clamp-3 max-w-xl leading-relaxed"
+                  className="text-ink-200 text-sm mb-4 line-clamp-2 sm:line-clamp-3 max-w-xl leading-relaxed"
                 >
                   {manga.description}
                 </motion.p>
@@ -252,7 +252,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-wrap items-center gap-3 mb-6"
+                className="flex flex-wrap items-center gap-3 mb-4"
               >
                 {Boolean(manga.rating && parseFloat(String(manga.rating)) > 0) && (
                   <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ink-900/60 border border-ink-800/40 text-xs font-semibold text-foreground">
@@ -290,7 +290,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.45, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-wrap items-center gap-3 mb-6"
+                className="flex flex-wrap items-center gap-3 mb-4"
               >
                 <Link href={getChapterUrl(manga, 1)}>
                   <motion.button
@@ -316,7 +316,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
             </AnimatePresence>
 
             {/* Prominent Hero Search Anchor */}
-            <div className="mb-4 max-w-xl">
+            <div className="mb-3 max-w-xl">
               <Link href="/search" className="block">
                 <div className="flex items-center justify-between w-full h-11 px-4 rounded-xl bg-ink-900/80 border border-ink-700/80 hover:border-primary/50 text-ink-300 text-xs transition-all shadow-md backdrop-blur-md cursor-pointer group">
                   <div className="flex items-center gap-2.5">

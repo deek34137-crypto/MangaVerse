@@ -223,7 +223,7 @@ export function MangaCard({
       {!isCompact && (
         <div className="mt-2 px-0.5 space-y-1 text-left flex-1 flex flex-col justify-between">
           <div className="space-y-1">
-            <Link href={`/manga/${manga.id}`} tabIndex={-1} className="block">
+            <Link href={getMangaUrl(manga)} tabIndex={-1} className="block">
               <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors duration-150">
                 {manga.title}
               </h3>
