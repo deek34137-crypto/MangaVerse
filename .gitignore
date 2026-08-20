@@ -48,3 +48,5 @@ next-env.d.ts
 
 # Provider debug snapshots
 debug
+.gemini/
+.wrangler/

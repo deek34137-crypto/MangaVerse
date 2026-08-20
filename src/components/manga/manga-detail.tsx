@@ -582,6 +582,11 @@ function ChapterRow({
   onClick: () => void;
   onMouseEnter?: () => void;
 }) {
+  const pageCountText =
+    chapter.pageCount && chapter.pageCount > 0
+      ? ` • ${chapter.pageCount} pages`
+      : "";
+
   return (
     <button
       onClick={onClick}
@@ -595,7 +600,7 @@ function ChapterRow({
             {chapter.title || `Chapter ${chapter.number}`}
           </p>
           <p className="text-xs text-muted-foreground">
-            {formatRelativeTime(chapter.publishedAt)} • {chapter.pageCount} pages
+            {formatRelativeTime(chapter.publishedAt)}{pageCountText}
           </p>
         </div>
       </div>

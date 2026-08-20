@@ -1,0 +1,11 @@
+name = "mangahub-backend"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+# Pure Edge Web API standard
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+DEFAULT_SEARCH_LIMIT = "24"
+CACHE_DEFAULT_TTL_SEC = "900"

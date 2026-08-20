@@ -16,6 +16,8 @@ export interface ChapterItemViewModel {
   chapterLabel: string;
   releasedAtLabel: string;
   sourcesCount: number;
+  pageCount?: number | null;
+  pageCountLabel?: string;
 }
 
 export interface MangaDetailViewModel {
@@ -64,13 +66,20 @@ export function toMangaDetailViewModel(
     badge: getProviderBadgeInfo(pm.providerId, true),
   }));
 
-  const chapterItems: ChapterItemViewModel[] = chapters.map((ch) => ({
-    chapterId: ch.canonicalChapterId || ch.id,
-    chapterNumber: ch.chapterNumber?.toString() || ch.key?.chapter?.toString() || "1",
-    chapterLabel: formatChapterLabel(ch.chapterNumber || ch.key?.chapter, ch.title),
-    releasedAtLabel: formatRelativeDate(ch.releasedAt),
-    sourcesCount: ch.sources.length,
-  }));
+  const chapterItems: ChapterItemViewModel[] = chapters.map((ch) => {
+    const rawPageCount = (ch as any).pageCount;
+    const validCount = rawPageCount && rawPageCount > 0 ? rawPageCount : null;
+
+    return {
+      chapterId: ch.canonicalChapterId || ch.id,
+      chapterNumber: ch.chapterNumber?.toString() || ch.key?.chapter?.toString() || "1",
+      chapterLabel: formatChapterLabel(ch.chapterNumber || ch.key?.chapter, ch.title),
+      releasedAtLabel: formatRelativeDate(ch.releasedAt),
+      sourcesCount: ch.sources.length,
+      pageCount: validCount,
+      pageCountLabel: validCount ? `${validCount} pages` : undefined,
+    };
+  });
 
   return {
     type: "SUCCESS",

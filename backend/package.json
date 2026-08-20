@@ -1,0 +1,23 @@
+{
+  "name": "mangahub-backend",
+  "version": "1.0.0",
+  "description": "MangaHub Edge Backend on Cloudflare Workers with Hono",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test:contract": "tsx tests/contract.test.ts"
+  },
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "hono": "^4.7.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.111.0"
+  }
+}
