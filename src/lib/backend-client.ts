@@ -235,10 +235,12 @@ export class BackendClient {
     url?: string
   ): Promise<NormalizedManga | null> {
     try {
+      const query: Record<string, string> = { provider, id };
+      if (url) query.url = url;
       return await this.request<NormalizedManga>("/api/manga/detail", {
-        method: "POST",
-        body: { provider, id, url },
-        revalidate: 300,
+        method: "GET",
+        query,
+        revalidate: 3600,
       });
     } catch (err) {
       console.error(`[BackendClient] getMangaDetail failed for ${provider}:${id}`, err);
@@ -265,10 +267,12 @@ export class BackendClient {
     url?: string
   ): Promise<NormalizedChapter[]> {
     try {
+      const query: Record<string, string> = { provider, id };
+      if (url) query.url = url;
       const res = await this.request<{ chapters: NormalizedChapter[] }>("/api/chapters", {
-        method: "POST",
-        body: { provider, id, url },
-        revalidate: 300,
+        method: "GET",
+        query,
+        revalidate: 1800,
       });
       return res.chapters || [];
     } catch (err) {
@@ -296,10 +300,12 @@ export class BackendClient {
     chapterId: string,
     url?: string
   ): Promise<ChapterPage[]> {
+    const query: Record<string, string> = { provider, chapterId };
+    if (url) query.url = url;
     const res = await this.request<PagesApiResponse>("/api/pages", {
-      method: "POST",
-      body: { provider, chapterId, url },
-      revalidate: 3600,
+      method: "GET",
+      query,
+      revalidate: 86400,
     });
     return res.pages || [];
   }

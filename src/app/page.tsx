@@ -11,6 +11,8 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { BookOpen, Search, Bookmark, History, Calendar, Sparkles, RefreshCw, Flame, Clock } from "lucide-react";
 import type { Manga } from "@/types";
 
+export const revalidate = 300;
+
 export default async function HomePage() {
   const viewModel = await loadHomePage();
 

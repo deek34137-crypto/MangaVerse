@@ -3,7 +3,7 @@ import { loadSearchPage } from "@/services/ui/loaders/search.loader";
 import { MangaCard } from "@/components/manga/manga-card";
 import type { Manga } from "@/types";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string }> }) {
   const resolvedParams = await searchParams;

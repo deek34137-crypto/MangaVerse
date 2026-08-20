@@ -49,7 +49,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   const l2Hit = await l2Backend.get<T>(key);
   if (l2Hit !== null) {
     recordL2Hit();
-    await l1Cache.set(key, l2Hit, 60); // Store in L1 for 60s
+    await l1Cache.set(key, l2Hit, 600); // Store in L1 for 10m
     return l2Hit;
   }
   recordDbMiss();
@@ -59,8 +59,8 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 /**
  * Two-Tier Cache SET (L1 In-Memory + L2 Redis)
  */
-export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-  await l1Cache.set(key, value, Math.min(ttlSeconds, 60));
+export async function cacheSet<T>(key: string, value: T, ttlSeconds: number = 3600): Promise<void> {
+  await l1Cache.set(key, value, ttlSeconds);
   const l2Backend = getBackend();
   if (l2Backend !== l1Cache) {
     await l2Backend.set(key, value, ttlSeconds);

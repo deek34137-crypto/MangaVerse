@@ -84,6 +84,7 @@ export function MangaCard({
       {/* ── Cover image ── */}
       <Link
         href={getMangaUrl(manga)}
+        prefetch={true}
         className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
         aria-label={`View ${manga.title}`}
       >
@@ -224,7 +225,7 @@ export function MangaCard({
       {!isCompact && (
         <div className="mt-2 px-0.5 space-y-1 text-left flex-1 flex flex-col justify-between">
           <div className="space-y-1">
-            <Link href={getMangaUrl(manga)} tabIndex={-1} className="block">
+            <Link href={getMangaUrl(manga)} prefetch={true} tabIndex={-1} className="block">
               <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors duration-150">
                 {manga.title}
               </h3>
