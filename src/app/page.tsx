@@ -55,11 +55,13 @@ export default async function HomePage() {
     volumeCount: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    latestChapter: {
-      id: "latest",
-      number: card.latestChapterLabel ? card.latestChapterLabel.replace(/^Chapter\s*/i, "") : "1",
-      title: card.latestChapterLabel || "Chapter 1",
-    } as any,
+    latestChapter: card.latestChapterLabel
+      ? ({
+          id: "latest",
+          number: card.latestChapterLabel.replace(/^Chapter\s*/i, ""),
+          title: card.latestChapterLabel,
+        } as any)
+      : undefined,
   }));
 
   const trendingMangaList: Manga[] = (viewModel.trendingRows || []).map((card) => ({
@@ -83,11 +85,13 @@ export default async function HomePage() {
     volumeCount: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    latestChapter: {
-      id: "latest",
-      number: card.latestChapterLabel ? card.latestChapterLabel.replace(/^Chapter\s*/i, "") : "1",
-      title: card.latestChapterLabel || "Chapter 1",
-    } as any,
+    latestChapter: card.latestChapterLabel
+      ? ({
+          id: "latest",
+          number: card.latestChapterLabel.replace(/^Chapter\s*/i, ""),
+          title: card.latestChapterLabel,
+        } as any)
+      : undefined,
   }));
 
   const continueReadingItems = (viewModel.continueReading || []).map((cr) => ({

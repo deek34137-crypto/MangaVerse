@@ -60,11 +60,24 @@ export async function getMangaDetail(idOrSlug: string): Promise<any | null> {
 
   try {
     let detail = await backendClient.getMangaDetail(provider, id);
-    if (!detail) {
-      // If not found directly, search by query across all providers to resolve
-      const searchRes = await backendClient.search(idOrSlug, "all", 1);
+    const isBadTitle =
+      !detail?.title ||
+      detail.title.startsWith("400") ||
+      detail.title.startsWith("404") ||
+      detail.title.toLowerCase().includes("weeb central") ||
+      detail.title.toLowerCase().includes("cloudflare");
+
+    if (!detail || isBadTitle) {
+      // If not found directly or returned an error page, search by query across all providers to resolve
+      const cleanQuery = idOrSlug
+        .replace(/^(weebcentral|mangadex|comick|mangakatana)[_-]/i, "")
+        .replace(/[-_]/g, " ");
+      const searchRes = await backendClient.search(cleanQuery, "all", 3);
       if (searchRes.results && searchRes.results.length > 0) {
-        const match = searchRes.results[0];
+        const match =
+          searchRes.results.find(
+            (r) => !r.title.startsWith("400") && !r.title.includes("Weeb Central")
+          ) || searchRes.results[0];
         detail = await backendClient.getMangaDetail(match.provider, match.id);
       }
     }

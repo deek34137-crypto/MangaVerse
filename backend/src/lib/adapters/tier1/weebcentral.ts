@@ -26,7 +26,7 @@ export class WeebCentralAdapter extends BaseAdapter {
 
   readonly networkPolicy: ProviderNetworkPolicy = {
     allowedHosts: ["weebcentral.com", "www.weebcentral.com"],
-    allowedHostSuffixes: ["weebcentral.com", "wixmp.com", "mangadex.network"],
+    allowedHostSuffixes: ["weebcentral.com", "wixmp.com", "mangadex.network", "temp-data.link", "compsci88.com"],
   };
 
   async search(query: string, options?: { limit?: number }): Promise<NormalizedSearchResult[]> {
@@ -52,6 +52,10 @@ export class WeebCentralAdapter extends BaseAdapter {
 
       const id = idMatch[1];
       const title = $el.find("a.link, h2, h3, .font-bold").first().text().trim();
+      if (!title || title.startsWith("400") || title.startsWith("404") || title.includes("Weeb Central")) {
+        return;
+      }
+
       const coverImage = $el.find("img").first().attr("src") || undefined;
       const latestChapterText = $el.find("a[href*='/chapters/']").first().text().trim();
 
@@ -68,19 +72,55 @@ export class WeebCentralAdapter extends BaseAdapter {
     return results;
   }
 
+  private async resolveRealId(idOrSlug: string): Promise<string> {
+    // If it's already a valid WeebCentral ULID (starts with 01 and is alphanumeric)
+    if (/^01[a-zA-Z0-9]{15,}$/.test(idOrSlug)) {
+      return idOrSlug;
+    }
+
+    // Try search by slug to find the real ID
+    const query = idOrSlug.replace(/[-_]/g, " ").trim();
+    if (query) {
+      try {
+        const searchResults = await this.search(query, { limit: 3 });
+        if (searchResults.length > 0 && searchResults[0].id) {
+          return searchResults[0].id;
+        }
+      } catch {}
+    }
+
+    return idOrSlug;
+  }
+
   async getMangaDetail(manga: ProviderReference): Promise<NormalizedManga> {
-    const url = manga.url || `${this.baseUrl}/series/${manga.id}`;
+    const realId = await this.resolveRealId(manga.id);
+    const url = `${this.baseUrl}/series/${realId}`;
     const html = await this.fetchHtml(url);
     const $ = cheerio.load(html);
 
-    const title = $("h1").first().text().trim() || $("title").text().split(" - ")[0].trim();
+    let title = $("h1").first().text().trim();
+    if (!title) {
+      const pageTitle = $("title").text();
+      title = pageTitle.split(" - ")[0].split(" | ")[0].trim();
+    }
+
+    // Check for error pages
+    if (!title || title.startsWith("400") || title.startsWith("404") || title.includes("Weeb Central") || title.includes("Cloudflare")) {
+      // Fallback search
+      const fallbackSearch = await this.search(manga.id.replace(/[-_]/g, " "), { limit: 1 });
+      if (fallbackSearch.length > 0 && fallbackSearch[0].id !== realId) {
+        return await this.getMangaDetail({ id: fallbackSearch[0].id, provider: this.id, url: fallbackSearch[0].url });
+      }
+      throw new Error(`WeebCentral manga not found for id: ${manga.id}`);
+    }
+
     const description = $("section p, .description, [itemprop='description']").first().text().trim();
     const coverImage = $("img[alt*='cover'], section img").first().attr("src");
 
     const genres: string[] = [];
     $("a[href*='/search?genre='], .badge").each((_, el) => {
       const g = $(el).text().trim();
-      if (g && !genres.includes(g)) genres.push(g);
+      if (g && !genres.includes(g) && !g.toLowerCase().includes("weebcentral")) genres.push(g);
     });
 
     const authors: string[] = [];
@@ -90,8 +130,8 @@ export class WeebCentralAdapter extends BaseAdapter {
     });
 
     return {
-      id: manga.id,
-      title: title || manga.id,
+      id: realId,
+      title,
       altTitles: [],
       description,
       coverImage: coverImage || undefined,
@@ -105,7 +145,8 @@ export class WeebCentralAdapter extends BaseAdapter {
   }
 
   async getChapters(manga: ProviderReference): Promise<NormalizedChapter[]> {
-    const url = `${this.baseUrl}/series/${manga.id}/full-chapter-list`;
+    const realId = await this.resolveRealId(manga.id);
+    const url = `${this.baseUrl}/series/${realId}/full-chapter-list`;
     const html = await this.fetchHtml(url, {
       headers: { "HX-Request": "true" },
     });

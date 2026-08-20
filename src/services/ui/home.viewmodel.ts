@@ -9,7 +9,7 @@ export interface MangaCardViewModel {
   coverImage: string;
   ratingLabel: string;
   rating?: number | null;
-  latestChapterLabel: string;
+  latestChapterLabel?: string;
   statusLabel: string;
   qualityTier: string;
   genres: string[];

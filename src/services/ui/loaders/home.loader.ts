@@ -13,7 +13,7 @@ function mapSearchResultToCard(item: NormalizedSearchResult): MangaCardViewModel
     coverImage: backendClient.getImageProxyUrl(item.provider, item.coverImage || ""),
     ratingLabel: formatRatingLabel(validRating),
     rating: validRating,
-    latestChapterLabel: item.latestChapter ? `Chapter ${item.latestChapter}` : "Chapter 1",
+    latestChapterLabel: item.latestChapter ? `Chapter ${item.latestChapter}` : undefined,
     statusLabel: "ONGOING",
     qualityTier: "TIER_A_PRODUCTION",
     genres: ["MANGA"],

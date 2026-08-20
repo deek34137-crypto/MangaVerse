@@ -10,6 +10,15 @@ import {
   ProviderTier,
 } from "../../../types";
 
+function buildComicKCoverUrl(coverUrl?: string, b2key?: string): string | undefined {
+  if (b2key) return `https://meo.comick.pictures/${b2key}`;
+  if (!coverUrl) return undefined;
+  if (coverUrl.startsWith("http://") || coverUrl.startsWith("https://")) {
+    return coverUrl;
+  }
+  return `https://meo.comick.pictures/${coverUrl}`;
+}
+
 export class ComicKAdapter extends BaseAdapter {
   readonly id = "comick";
   readonly name = "ComicK";
@@ -44,9 +53,7 @@ export class ComicKAdapter extends BaseAdapter {
     for (const item of items) {
       const hid = item.hid;
       const title = item.title || "Untitled";
-      const coverUrl = item.cover_url || item.md_covers?.[0]?.b2key
-        ? `https://meo.comick.pictures/${item.md_covers?.[0]?.b2key || item.cover_url}`
-        : undefined;
+      const coverUrl = buildComicKCoverUrl(item.cover_url, item.md_covers?.[0]?.b2key);
 
       const altTitles: string[] = [];
       if (Array.isArray(item.md_titles)) {
@@ -76,9 +83,7 @@ export class ComicKAdapter extends BaseAdapter {
 
     const title = comic?.title || manga.id;
     const description = comic?.desc || "";
-    const coverUrl = comic?.cover_url || comic?.md_covers?.[0]?.b2key
-      ? `https://meo.comick.pictures/${comic.md_covers?.[0]?.b2key || comic.cover_url}`
-      : undefined;
+    const coverUrl = buildComicKCoverUrl(comic?.cover_url, comic?.md_covers?.[0]?.b2key);
 
     const genres: string[] = [];
     if (Array.isArray(comic?.md_comic_md_genres)) {
@@ -148,26 +153,29 @@ export class ComicKAdapter extends BaseAdapter {
   async getPages(chapter: ProviderReference): Promise<ChapterPage[]> {
     const url = `${this.baseUrl}/chapter/${chapter.id}?tachiyomi=true`;
     const data = await this.fetchJson<any>(url);
-    const images = data?.chapter?.images || [];
+    const chapterData = data?.chapter || data;
 
     const pages: ChapterPage[] = [];
-    images.forEach((img: any, idx: number) => {
-      const b2key = img.b2key || img.url;
-      const fullUrl = b2key.startsWith("http")
-        ? b2key
-        : `https://meo.comick.pictures/${b2key}`;
+    if (!chapterData?.images || !Array.isArray(chapterData.images)) {
+      return pages;
+    }
 
-      pages.push({
-        index: idx + 1,
-        url: fullUrl,
-        width: img.w,
-        height: img.h,
-        headers: {
-          referer: "https://comick.io/",
-          origin: "https://comick.io",
-        },
-        provider: this.id,
-      });
+    chapterData.images.forEach((img: any, idx: number) => {
+      const imgUrl = img.b2key
+        ? `https://meo.comick.pictures/${img.b2key}`
+        : img.url;
+
+      if (imgUrl) {
+        pages.push({
+          index: idx + 1,
+          url: imgUrl,
+          headers: {
+            referer: "https://comick.io/",
+            origin: "https://comick.io",
+          },
+          provider: this.id,
+        });
+      }
     });
 
     return pages;
