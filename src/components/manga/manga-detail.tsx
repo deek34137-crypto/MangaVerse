@@ -56,9 +56,14 @@ interface MangaDetailProps {
 }
  
 function TiltCover({ manga }: { manga: Manga }) {
+  const [imgSrc, setImgSrc] = useState<string>(() => getProxiedImageUrl(manga.coverImage));
   const cardRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+
+  useEffect(() => {
+    setImgSrc(getProxiedImageUrl(manga.coverImage));
+  }, [manga.coverImage]);
  
   const rotateX = useSpring(useTransform(y, [-1, 1], [8, -8]), { stiffness: 300, damping: 30 });
   const rotateY = useSpring(useTransform(x, [-1, 1], [-8, 8]), { stiffness: 300, damping: 30 });
@@ -81,14 +86,16 @@ function TiltCover({ manga }: { manga: Manga }) {
       style={{ rotateX, rotateY, transformStyle: "preserve-3d", perspective: 800 }}
       className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl bg-muted cursor-pointer"
     >
-      {manga.coverImage ? (
+      {imgSrc ? (
         <Image
-          src={getProxiedImageUrl(manga.coverImage)}
+          src={imgSrc}
           alt={manga.title}
           fill
           className="object-cover"
           priority
           sizes="(max-width: 768px) 100vw, 384px"
+          unoptimized
+          onError={() => setImgSrc("/placeholders/cover.jpg")}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20">
@@ -116,8 +123,15 @@ export function MangaDetail({ manga, chapters }: MangaDetailProps) {
   const [activeTab, setActiveTab] = useState("info");
   const [readingStatus, setReadingStatus] = useState<LibraryStatus>(manga.userData?.status || "plan_to_read");
   const [showReader, setShowReader] = useState(false);
-  const [startChapter, setStartChapter] = useState(chapters[0]?.id);
+  const [startChapter, setStartChapter] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
+  const [bannerSrc, setBannerSrc] = useState<string>(() =>
+    getProxiedImageUrl(manga.bannerImage || manga.coverImage)
+  );
+
+  useEffect(() => {
+    setBannerSrc(getProxiedImageUrl(manga.bannerImage || manga.coverImage));
+  }, [manga.bannerImage, manga.coverImage]);
 
   const {
     chapter: loadedChapter,
@@ -163,18 +177,20 @@ export function MangaDetail({ manga, chapters }: MangaDetailProps) {
   return (
     <div className="min-h-screen">
       <div className="relative">
-        {manga.bannerImage && (
+        {bannerSrc && (
           <div 
             className="absolute inset-0 -z-10 overflow-hidden"
             style={{ transform: `translateY(${scrollY * 0.45}px)` }}
           >
             <Image
-              src={getProxiedImageUrl(manga.bannerImage)}
+              src={bannerSrc}
               alt=""
               fill
               className="object-cover"
               priority
               sizes="100vw"
+              unoptimized
+              onError={() => setBannerSrc("")}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/50 to-transparent" />
           </div>
