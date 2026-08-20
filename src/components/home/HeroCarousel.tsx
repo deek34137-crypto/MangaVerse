@@ -7,8 +7,8 @@ import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from
 import Image from "next/image";
 import Link from "next/link";
 import { Star, BookOpen, ArrowRight, Play, Pause, Eye } from "lucide-react";
-import { cn, formatNumber, getProxiedImageUrl, formatChapterLabel } from "@/lib/utils";
-import { getMangaUrl, getChapterUrl, getGenreUrl } from "@/lib/url";
+import { cn, formatNumber, getProxiedImageUrl } from "@/lib/utils";
+import { getMangaUrl, getChapterUrl } from "@/lib/url";
 import type { Manga } from "@/types";
 
 interface HeroCarouselProps {
@@ -22,7 +22,7 @@ function AnimatedTitle({ title, animationKey }: { title: string; animationKey: s
   return (
     <h1
       key={animationKey}
-      className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-3 leading-[1.1]"
+      className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-foreground mb-3 leading-[1.15] tracking-tight line-clamp-2 sm:line-clamp-3 break-words"
       aria-label={title}
     >
       {words.map((word, i) => (
@@ -33,7 +33,7 @@ function AnimatedTitle({ title, animationKey }: { title: string; animationKey: s
             animate={{ y: 0, opacity: 1 }}
             transition={{
               duration: 0.55,
-              delay: i * 0.08,
+              delay: i * 0.05,
               ease: [0.22, 1, 0.36, 1],
             }}
           >
@@ -70,7 +70,7 @@ function TiltCover({ manga }: { manga: Manga }) {
       onMouseMove={handleMouse}
       onMouseLeave={reset}
       style={{ rotateX, rotateY, transformStyle: "preserve-3d", perspective: 800 }}
-      className="relative w-56 md:w-64 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl cursor-pointer flex-shrink-0"
+      className="relative w-56 md:w-64 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl cursor-pointer flex-shrink-0 border border-ink-700/50"
     >
       {manga.coverImage && (
         <Image
@@ -140,10 +140,13 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
   }
 
   const manga = featured[current];
+  const ratingValue = manga.rating ? parseFloat(String(manga.rating)) : 0;
+  const viewCountValue = manga.viewCount || 0;
+  const hasGenres = Boolean(manga.genres && manga.genres.length > 0);
 
   return (
     <section
-      className={cn("relative min-h-[580px] lg:min-h-[660px] overflow-hidden bg-background select-none py-6 lg:py-0", className)}
+      className={cn("relative overflow-hidden bg-background select-none pt-24 sm:pt-28 pb-12 lg:pt-32 lg:pb-16", className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onKeyDown={handleKey}
@@ -180,18 +183,13 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
           ) : null
         )}
       </AnimatePresence>
- 
+
       {/* ── Layered Gradient Overlay System ── */}
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-background/20 z-10 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/40 z-10 pointer-events-none" />
- 
-      {/* ── Noise grain texture ── */}
-      <div className="absolute inset-0 z-10 opacity-[0.015] mix-blend-overlay pointer-events-none"
-        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
-      />
- 
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/30 z-10 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50 z-10 pointer-events-none" />
+
       {/* ── Main content layout ── */}
-      <div className="relative z-20 h-full container-padded flex items-center pt-24 pb-20 lg:pt-28 lg:pb-24">
+      <div className="relative z-20 container-padded">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center w-full">
 
           {/* Left — text metadata & CTAs (7 cols) */}
@@ -237,7 +235,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                  className="text-ink-200 text-sm mb-4 line-clamp-2 sm:line-clamp-3 max-w-xl leading-relaxed"
+                  className="text-muted-foreground text-sm mb-4 line-clamp-2 sm:line-clamp-3 max-w-xl leading-relaxed"
                 >
                   {manga.description}
                 </motion.p>
@@ -252,23 +250,23 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-wrap items-center gap-3 mb-4"
+                className="flex flex-wrap items-center gap-3 mb-5"
               >
-                {Boolean(manga.rating && parseFloat(String(manga.rating)) > 0) && (
+                {ratingValue > 0 && (
                   <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ink-900/60 border border-ink-800/40 text-xs font-semibold text-foreground">
                     <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-                    <span>{parseFloat(String(manga.rating)).toFixed(1)}</span>
+                    <span>{ratingValue.toFixed(1)}</span>
                   </span>
                 )}
-                {Boolean(manga.viewCount && manga.viewCount > 0) && (
-                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ink-900/60 border border-ink-800/40 text-xs text-ink-300">
+                {viewCountValue > 0 && (
+                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ink-900/60 border border-ink-800/40 text-xs text-muted-foreground">
                     <Eye className="h-3.5 w-3.5" />
-                    <span>{formatNumber(manga.viewCount)} views</span>
+                    <span>{formatNumber(viewCountValue)} views</span>
                   </span>
                 )}
-                {manga.genres?.length > 0 && (
+                {hasGenres && (
                   <div className="flex gap-1.5 flex-wrap">
-                    {manga.genres.slice(0, 2).map((g: { id?: string; name?: string } | string) => {
+                    {manga.genres.slice(0, 3).map((g: { id?: string; name?: string } | string) => {
                       const name = typeof g === "string" ? g : g.name;
                       const key = typeof g === "string" ? g : (g.id ?? g.name ?? String(g));
                       return (
@@ -290,7 +288,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.45, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-wrap items-center gap-3 mb-4"
+                className="flex flex-wrap items-center gap-3 mb-6"
               >
                 <Link href={getChapterUrl(manga, 1)}>
                   <motion.button
@@ -305,7 +303,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 </Link>
                 <Link href={getMangaUrl(manga)}>
                   <motion.button
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-ink-900/60 border border-ink-700/60 text-foreground font-medium text-sm hover:bg-ink-800/80 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-card border border-border text-foreground font-medium text-sm hover:bg-accent transition-all cursor-pointer shadow-sm"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -315,41 +313,21 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
               </motion.div>
             </AnimatePresence>
 
-            {/* Prominent Hero Search Anchor */}
-            <div className="mb-3 max-w-xl">
+            {/* Quick Hero Search Input */}
+            <div className="max-w-xl">
               <Link href="/search" className="block">
-                <div className="flex items-center justify-between w-full h-11 px-4 rounded-xl bg-ink-900/80 border border-ink-700/80 hover:border-primary/50 text-ink-300 text-xs transition-all shadow-md backdrop-blur-md cursor-pointer group">
+                <div className="flex items-center justify-between w-full h-11 px-4 rounded-xl bg-card/80 border border-border/80 hover:border-primary/50 text-muted-foreground text-xs transition-all shadow-sm backdrop-blur-md cursor-pointer group">
                   <div className="flex items-center gap-2.5">
-                    <svg className="h-4 w-4 text-ink-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <span className="font-medium text-ink-300">Search manga titles, authors, or genres...</span>
+                    <span className="font-medium text-foreground/80">Search manga titles, authors, or genres...</span>
                   </div>
-                  <kbd className="hidden sm:inline-flex items-center rounded border border-ink-700 px-2 py-0.5 text-[10px] font-mono text-ink-400">
+                  <kbd className="hidden sm:inline-flex items-center rounded border border-border px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
                     ⌘K
                   </kbd>
                 </div>
               </Link>
-            </div>
-
-            {/* Curated 8 Genre Chips */}
-            <div className="flex flex-wrap items-center gap-1.5 max-w-xl">
-              {[
-                { label: "Action", href: "/genres/action" },
-                { label: "Fantasy", href: "/genres/fantasy" },
-                { label: "Romance", href: "/genres/romance" },
-                { label: "Comedy", href: "/genres/comedy" },
-                { label: "Drama", href: "/genres/drama" },
-                { label: "Manhwa", href: "/search?type=manhwa" },
-                { label: "Completed", href: "/search?status=completed" },
-                { label: "Top Rated", href: "/search?sortBy=rating" },
-              ].map((chip) => (
-                <Link key={chip.label} href={chip.href}>
-                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-ink-900/50 hover:bg-primary/20 text-ink-300 hover:text-primary border border-ink-800/60 hover:border-primary/40 transition-all cursor-pointer">
-                    {chip.label}
-                  </span>
-                </Link>
-              ))}
             </div>
           </div>
 
@@ -371,11 +349,9 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
             </AnimatePresence>
           </div>
         </div>
-      </div>
- 
-      {/* ── Bottom Controls bar ── */}
-      <div className="absolute bottom-4 left-0 right-0 z-30 container-padded">
-        <div className="flex items-center gap-4">
+
+        {/* ── Carousel Bottom Navigation & Indicators ── */}
+        <div className="mt-8 pt-4 border-t border-border/20 flex items-center gap-4">
           {/* Slide dots */}
           <div className="flex items-center gap-1.5" role="tablist" aria-label="Carousel slides">
             {featured.map((m, i) => (
@@ -386,7 +362,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 aria-selected={i === current}
                 aria-label={`Go to ${m.title}`}
                 className={cn(
-                  "h-1 rounded-full transition-all duration-300 cursor-pointer",
+                  "h-1.5 rounded-full transition-all duration-300 cursor-pointer",
                   i === current ? "bg-primary w-6" : "bg-border w-2 hover:bg-primary/50"
                 )}
                 whileTap={{ scale: 0.85 }}
@@ -407,7 +383,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
           {/* Play/Pause */}
           <motion.button
             onClick={() => setIsPlaying((p) => !p)}
-            className="p-1.5 rounded-full bg-ink-900/60 border border-ink-800/60 text-ink-300 hover:text-foreground hover:border-primary/50 transition-all cursor-pointer"
+            className="p-1.5 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer"
             aria-label={isPlaying ? "Pause" : "Play"}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -415,17 +391,11 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
             {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </motion.button>
 
-          {/* Scroll Down Indicator */}
-          <div className="hidden lg:flex items-center gap-1 ml-auto text-ink-400 text-xs animate-pulse">
-            <span>Scroll Down</span>
-            <ArrowRight className="h-3.5 w-3.5 rotate-90" />
-          </div>
-
           {/* Desktop Arrow Nav */}
-          <div className="flex items-center gap-1.5 ml-auto lg:ml-2">
+          <div className="flex items-center gap-1.5 ml-auto">
             <motion.button
               onClick={goPrev}
-              className="h-8 w-8 rounded-full bg-ink-900/60 border border-ink-800/60 flex items-center justify-center text-ink-300 hover:text-foreground hover:border-primary/50 transition-all cursor-pointer"
+              className="h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer shadow-sm"
               aria-label="Previous slide"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -434,7 +404,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
             </motion.button>
             <motion.button
               onClick={goNext}
-              className="h-8 w-8 rounded-full bg-ink-900/60 border border-ink-800/60 flex items-center justify-center text-ink-300 hover:text-foreground hover:border-primary/50 transition-all cursor-pointer"
+              className="h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer shadow-sm"
               aria-label="Next slide"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
