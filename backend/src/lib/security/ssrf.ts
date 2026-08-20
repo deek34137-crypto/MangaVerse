@@ -13,6 +13,15 @@ const PRIVATE_IP_PATTERNS = [
   /^fe80:/i,
 ];
 
+const BLOCKED_HOSTNAMES = [
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  "169.254.169.254",
+  "metadata.google.internal",
+  "instance-data",
+];
+
 // Explicit separation: Metadata APIs vs Image CDNs
 export const METADATA_API_ALLOWLIST = [
   "graphql.anilist.co",
@@ -39,6 +48,7 @@ export const COMMON_MANGA_CDN_SUFFIXES = [
   "weebcentral.com",
   "compsci88.com",
   "temp-data.link",
+  "lowee.us",
   "wixmp.com",
   "googleusercontent.com",
   "cloudinary.com",
@@ -76,9 +86,22 @@ export interface SSRFValidationResult {
   sanitizedUrl?: string;
 }
 
+export function isPrivateOrBlockedHost(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+
+  if (BLOCKED_HOSTNAMES.includes(lower)) return true;
+  if (lower.endsWith(".internal") || lower.endsWith(".local") || lower.endsWith(".lan")) return true;
+
+  for (const pattern of PRIVATE_IP_PATTERNS) {
+    if (pattern.test(lower)) return true;
+  }
+
+  return false;
+}
+
 export function validateUrlAgainstNetworkPolicy(
   rawUrl: string,
-  policy: ProviderNetworkPolicy
+  _policy?: ProviderNetworkPolicy
 ): SSRFValidationResult {
   if (!rawUrl || typeof rawUrl !== "string") {
     return { valid: false, reason: "Missing or invalid URL" };
@@ -98,39 +121,11 @@ export function validateUrlAgainstNetworkPolicy(
 
   const hostname = parsed.hostname.toLowerCase();
 
-  // Block private and internal IP ranges / hostnames
-  for (const pattern of PRIVATE_IP_PATTERNS) {
-    if (pattern.test(hostname)) {
-      return { valid: false, reason: `Blocked private or local address: ${hostname}` };
-    }
+  // Block private and internal IP ranges / hostnames / metadata endpoints
+  if (isPrivateOrBlockedHost(hostname)) {
+    return { valid: false, reason: `Blocked private or local address: ${hostname}` };
   }
 
-  // Check against provider policy allowed hosts
-  const isExactMatch = policy.allowedHosts.some(
-    (allowed) => allowed.toLowerCase() === hostname
-  );
-
-  if (isExactMatch) {
-    return { valid: true, sanitizedUrl: parsed.toString() };
-  }
-
-  // Check against provider policy allowed host suffixes
-  const combinedSuffixes = [
-    ...(policy.allowedHostSuffixes || []),
-    ...COMMON_MANGA_CDN_SUFFIXES,
-  ];
-
-  const isSuffixMatch = combinedSuffixes.some((suffix) => {
-    const cleanSuffix = suffix.startsWith(".") ? suffix.toLowerCase() : `.${suffix.toLowerCase()}`;
-    return hostname === suffix.toLowerCase() || hostname.endsWith(cleanSuffix);
-  });
-
-  if (isSuffixMatch) {
-    return { valid: true, sanitizedUrl: parsed.toString() };
-  }
-
-  return {
-    valid: false,
-    reason: `Hostname "${hostname}" is not authorized by the provider network policy.`,
-  };
+  // All valid public web addresses are allowed for manga image proxying
+  return { valid: true, sanitizedUrl: parsed.toString() };
 }
