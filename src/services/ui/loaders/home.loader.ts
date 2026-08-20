@@ -16,7 +16,7 @@ function mapSearchResultToCard(item: NormalizedSearchResult): MangaCardViewModel
     latestChapterLabel: item.latestChapter ? `Chapter ${item.latestChapter}` : "Chapter 1",
     statusLabel: "ONGOING",
     qualityTier: "TIER_A_PRODUCTION",
-    genres: [item.provider.toUpperCase()],
+    genres: ["MANGA"],
   };
 }
 

@@ -99,8 +99,8 @@ export function ReaderView({ viewModel }: { viewModel: ReaderViewModel }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${viewModel.winningProviderBadge.colorClass}`}>
-            {viewModel.winningProviderBadge.name}
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full border border-primary/30 bg-primary/10 text-primary">
+            HD Stream
           </span>
 
           <button

@@ -35,7 +35,7 @@ export async function loadSearchPage(query: string = ""): Promise<SearchResultVi
         latestChapterLabel: item.latestChapter ? `Chapter ${item.latestChapter}` : "Chapter 1",
         statusLabel: "ONGOING",
         qualityTier: "TIER_A_PRODUCTION",
-        genres: [item.provider.toUpperCase()],
+        genres: ["MANGA"],
       };
     });
 
@@ -63,7 +63,7 @@ export async function loadSearchPage(query: string = ""): Promise<SearchResultVi
   } catch (error: any) {
     return {
       type: "ERROR",
-      errorMessage: error?.message || "Search failed. Please retry in a few moments.",
+      errorMessage: error?.message || "Search index service temporarily unavailable.",
       cachedResults: [],
     };
   }

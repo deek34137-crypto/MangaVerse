@@ -284,13 +284,6 @@ export function Reader({
   // Prevents the '1 / 0' display when a chapter has no pages yet synced.
   // ── Empty-page guard (Recoverable Reader Error UI) ──────────────────────────
   if (totalPages === 0) {
-    const availableProviders = [
-      { id: "mangadex", name: "MangaDex", status: "Unavailable", color: "text-red-400 bg-red-500/10 border-red-500/20" },
-      { id: "comick", name: "ComicK", status: "✓ Available (120ms)", color: "text-green-400 bg-green-500/10 border-green-500/30" },
-      { id: "weebcentral", name: "WeebCentral", status: "Retrying...", color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30" },
-      { id: "mangakatana", name: "MangaKatana", status: "✓ Available (210ms)", color: "text-green-400 bg-green-500/10 border-green-500/30" },
-    ];
-
     return (
       <div
         className={cn(
@@ -302,27 +295,8 @@ export function Reader({
           <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-destructive/10 border border-destructive/20 mx-auto">
             <Info className="h-7 w-7 text-destructive" />
           </div>
-          <h2 className="text-lg font-bold font-display">Primary provider couldn&apos;t load pages.</h2>
-          <p className="text-xs text-muted-foreground">Select an alternate provider source to continue reading:</p>
-
-          {/* Provider Selection Pills */}
-          <div className="space-y-2 text-left my-3">
-            {availableProviders.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => window.location.reload()}
-                className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/60 hover:bg-muted/80 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{p.name}</span>
-                </div>
-                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", p.color)}>
-                  {p.status}
-                </span>
-              </button>
-            ))}
-          </div>
+          <h2 className="text-lg font-bold font-display">Could not load chapter pages.</h2>
+          <p className="text-xs text-muted-foreground">The chapter pages are currently synchronizing. Please try retrying or return to the series page.</p>
 
           <div className="flex gap-3 justify-center pt-2">
             <Button
@@ -331,7 +305,7 @@ export function Reader({
               className="h-10 px-5 font-semibold text-xs rounded-xl"
             >
               <RotateCcw className="h-4 w-4 mr-1.5" />
-              Retry Source
+              Retry Chapter
             </Button>
             <Button
               variant="outline"

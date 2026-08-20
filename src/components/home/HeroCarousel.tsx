@@ -16,6 +16,29 @@ interface HeroCarouselProps {
   className?: string;
 }
 
+const HIDDEN_SOURCE_NAMES = new Set([
+  "weebcentral",
+  "mangadex",
+  "mangakatana",
+  "comick",
+  "asurascan",
+  "flamecomics",
+  "mgeko",
+  "mangaread",
+  "bato",
+  "demonicscans",
+  "kaliscan",
+  "webtoon",
+  "novelcool",
+  "provider",
+  "sources",
+]);
+
+function isCleanCategory(name?: string): boolean {
+  if (!name) return false;
+  return !HIDDEN_SOURCE_NAMES.has(name.trim().toLowerCase());
+}
+
 /* ── Animated word-by-word title ─────────────────────────────────────────── */
 function AnimatedTitle({ title, animationKey }: { title: string; animationKey: string }) {
   const words = title.split(" ");
@@ -70,7 +93,7 @@ function TiltCover({ manga }: { manga: Manga }) {
       onMouseMove={handleMouse}
       onMouseLeave={reset}
       style={{ rotateX, rotateY, transformStyle: "preserve-3d", perspective: 800 }}
-      className="relative w-56 md:w-64 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl cursor-pointer flex-shrink-0 border border-ink-700/50"
+      className="relative w-56 md:w-64 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl cursor-pointer flex-shrink-0 border border-ink-700/50 bg-ink-900"
     >
       {manga.coverImage && (
         <Image
@@ -81,6 +104,7 @@ function TiltCover({ manga }: { manga: Manga }) {
           priority
           sizes="(max-width: 768px) 224px, 256px"
           quality={90}
+          unoptimized
         />
       )}
       {/* Glare */}
@@ -101,7 +125,7 @@ function TiltCover({ manga }: { manga: Manga }) {
 /* ── Progress bar ────────────────────────────────────────────────────────── */
 function ProgressBar({ duration, isPlaying, onComplete }: { duration: number; isPlaying: boolean; onComplete: () => void }) {
   return (
-    <div className="h-0.5 w-full bg-border/50 rounded-full overflow-hidden">
+    <div className="h-1 w-full bg-border/50 rounded-full overflow-hidden">
       <motion.div
         className="h-full bg-primary rounded-full origin-left"
         initial={{ scaleX: 0 }}
@@ -142,7 +166,11 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
   const manga = featured[current];
   const ratingValue = manga.rating ? parseFloat(String(manga.rating)) : 0;
   const viewCountValue = manga.viewCount || 0;
-  const hasGenres = Boolean(manga.genres && manga.genres.length > 0);
+
+  const cleanGenres = (manga.genres || []).filter((g) => {
+    const name = typeof g === "string" ? g : g.name;
+    return isCleanCategory(name);
+  });
 
   return (
     <section
@@ -176,6 +204,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                   priority={i === 0}
                   sizes="100vw"
                   quality={60}
+                  unoptimized
                   aria-hidden="true"
                 />
               )}
@@ -192,7 +221,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
       <div className="relative z-20 container-padded">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center w-full">
 
-          {/* Left — text metadata & CTAs (7 cols) */}
+          {/* Left — text metadata, CTAs & Controls (7 cols) */}
           <div className="lg:col-span-7 flex flex-col justify-center text-left max-w-2xl">
             {/* Tag Badges */}
             <AnimatePresence mode="wait">
@@ -208,7 +237,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                   <Star className="h-3 w-3 mr-1 fill-primary-foreground" />
                   Editor Recommendation
                 </span>
-                {manga.type && (
+                {manga.type && isCleanCategory(manga.type) && (
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-ink-800 text-ink-100 border border-ink-700/60">
                     {manga.type}
                   </span>
@@ -264,9 +293,9 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                     <span>{formatNumber(viewCountValue)} views</span>
                   </span>
                 )}
-                {hasGenres && (
+                {cleanGenres.length > 0 && (
                   <div className="flex gap-1.5 flex-wrap">
-                    {manga.genres.slice(0, 3).map((g: { id?: string; name?: string } | string) => {
+                    {cleanGenres.slice(0, 3).map((g: { id?: string; name?: string } | string) => {
                       const name = typeof g === "string" ? g : g.name;
                       const key = typeof g === "string" ? g : (g.id ?? g.name ?? String(g));
                       return (
@@ -288,7 +317,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.45, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-wrap items-center gap-3 mb-6"
+                className="flex flex-wrap items-center gap-3 mb-5"
               >
                 <Link href={getChapterUrl(manga, 1)}>
                   <motion.button
@@ -313,7 +342,71 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
               </motion.div>
             </AnimatePresence>
 
-            {/* Quick Hero Search Input */}
+            {/* ── Slide dots & Red Progress Bar Controls (Exchanged Position) ── */}
+            <div className="flex items-center gap-3.5 mb-5 max-w-xl">
+              {/* Slide dots */}
+              <div className="flex items-center gap-1.5" role="tablist" aria-label="Carousel slides">
+                {featured.map((m, i) => (
+                  <motion.button
+                    key={m.id}
+                    onClick={() => setCurrent(i)}
+                    role="tab"
+                    aria-selected={i === current}
+                    aria-label={`Go to ${m.title}`}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300 cursor-pointer",
+                      i === current ? "bg-primary w-6" : "bg-border w-2 hover:bg-primary/50"
+                    )}
+                    whileTap={{ scale: 0.85 }}
+                  />
+                ))}
+              </div>
+
+              {/* Red Progress bar */}
+              <div className="flex-1 max-w-44">
+                <ProgressBar
+                  duration={6}
+                  isPlaying={autoPlay}
+                  onComplete={goNext}
+                  key={`prog-${current}-${autoPlay}`}
+                />
+              </div>
+
+              {/* Play/Pause */}
+              <motion.button
+                onClick={() => setIsPlaying((p) => !p)}
+                className="p-1.5 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer"
+                aria-label={isPlaying ? "Pause" : "Play"}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+              </motion.button>
+
+              {/* Arrow Nav Buttons */}
+              <div className="flex items-center gap-1 ml-auto">
+                <motion.button
+                  onClick={goPrev}
+                  className="h-7 w-7 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer shadow-sm"
+                  aria-label="Previous slide"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+                </motion.button>
+                <motion.button
+                  onClick={goNext}
+                  className="h-7 w-7 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer shadow-sm"
+                  aria-label="Next slide"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+                </motion.button>
+              </div>
+            </div>
+
+            {/* Quick Hero Search Input (Positioned Below Controls) */}
             <div className="max-w-xl">
               <Link href="/search" className="block">
                 <div className="flex items-center justify-between w-full h-11 px-4 rounded-xl bg-card/80 border border-border/80 hover:border-primary/50 text-muted-foreground text-xs transition-all shadow-sm backdrop-blur-md cursor-pointer group">
@@ -347,70 +440,6 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
                 <TiltCover manga={manga} />
               </motion.div>
             </AnimatePresence>
-          </div>
-        </div>
-
-        {/* ── Carousel Bottom Navigation & Indicators ── */}
-        <div className="mt-8 pt-4 border-t border-border/20 flex items-center gap-4">
-          {/* Slide dots */}
-          <div className="flex items-center gap-1.5" role="tablist" aria-label="Carousel slides">
-            {featured.map((m, i) => (
-              <motion.button
-                key={m.id}
-                onClick={() => setCurrent(i)}
-                role="tab"
-                aria-selected={i === current}
-                aria-label={`Go to ${m.title}`}
-                className={cn(
-                  "h-1.5 rounded-full transition-all duration-300 cursor-pointer",
-                  i === current ? "bg-primary w-6" : "bg-border w-2 hover:bg-primary/50"
-                )}
-                whileTap={{ scale: 0.85 }}
-              />
-            ))}
-          </div>
-
-          {/* Progress bar */}
-          <div className="flex-1 max-w-32 hidden md:block">
-            <ProgressBar
-              duration={6}
-              isPlaying={autoPlay}
-              onComplete={goNext}
-              key={`prog-${current}-${autoPlay}`}
-            />
-          </div>
-
-          {/* Play/Pause */}
-          <motion.button
-            onClick={() => setIsPlaying((p) => !p)}
-            className="p-1.5 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer"
-            aria-label={isPlaying ? "Pause" : "Play"}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          </motion.button>
-
-          {/* Desktop Arrow Nav */}
-          <div className="flex items-center gap-1.5 ml-auto">
-            <motion.button
-              onClick={goPrev}
-              className="h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer shadow-sm"
-              aria-label="Previous slide"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-            </motion.button>
-            <motion.button
-              onClick={goNext}
-              className="h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer shadow-sm"
-              aria-label="Next slide"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-            </motion.button>
           </div>
         </div>
       </div>

@@ -138,10 +138,10 @@ export default async function HomePage() {
           <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/50 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="font-semibold text-foreground">Multi-Provider Live Sync Active</span>
-              <span className="hidden sm:inline text-muted-foreground">• Aggregated from 8 sources</span>
+              <span className="font-semibold text-foreground">MangaHub Edge Network Active</span>
+              <span className="hidden sm:inline text-muted-foreground">• Zero Ads • Fast Chapter Streaming</span>
             </div>
-            <span className="text-[11px] font-mono text-muted-foreground">Updated 12m ago</span>
+            <span className="text-[11px] font-mono text-muted-foreground">Live Cloudflare CDN</span>
           </div>
         </div>
 

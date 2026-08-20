@@ -1,13 +1,15 @@
 import { CanonicalManga, CanonicalChapter } from "../aggregation/types";
 import { formatRatingLabel, formatRelativeDate, formatChapterLabel } from "./shared/formatters";
-import { getProviderBadgeInfo, ProviderBadgeInfo } from "./shared/badges";
 
 export interface ProviderMatrixItem {
   providerId: string;
   name: string;
-  status: "ONLINE" | "DEGRADED" | "MISSING";
+  status: "ONLINE" | "DEGRADED" | "OFFLINE";
   statusText: string;
-  badge: ProviderBadgeInfo;
+  badge: {
+    label: string;
+    variant: "tier1" | "tier2" | "tier3" | "default";
+  };
 }
 
 export interface ChapterItemViewModel {
@@ -53,19 +55,29 @@ export interface MangaErrorViewModel {
 
 export type MangaDetailResultViewModel = MangaDetailViewModel | MangaErrorViewModel;
 
+const HIDDEN_SOURCE_NAMES = new Set([
+  "weebcentral",
+  "mangadex",
+  "mangakatana",
+  "comick",
+  "asurascan",
+  "flamecomics",
+  "mgeko",
+  "mangaread",
+  "bato",
+  "demonicscans",
+  "kaliscan",
+  "webtoon",
+  "novelcool",
+  "provider",
+  "sources",
+]);
+
 export function toMangaDetailViewModel(
   manga: CanonicalManga,
   chapters: CanonicalChapter[] = [],
   recs: any[] = []
 ): MangaDetailViewModel {
-  const providerMatrix: ProviderMatrixItem[] = manga.providerMappings.map((pm) => ({
-    providerId: pm.providerId,
-    name: pm.providerId.toUpperCase(),
-    status: "ONLINE",
-    statusText: "Available",
-    badge: getProviderBadgeInfo(pm.providerId, true),
-  }));
-
   const chapterItems: ChapterItemViewModel[] = chapters.map((ch) => {
     const rawPageCount = (ch as any).pageCount;
     const validCount = rawPageCount && rawPageCount > 0 ? rawPageCount : null;
@@ -75,11 +87,16 @@ export function toMangaDetailViewModel(
       chapterNumber: ch.chapterNumber?.toString() || ch.key?.chapter?.toString() || "1",
       chapterLabel: formatChapterLabel(ch.chapterNumber || ch.key?.chapter, ch.title),
       releasedAtLabel: formatRelativeDate(ch.releasedAt),
-      sourcesCount: ch.sources.length,
+      sourcesCount: 1,
       pageCount: validCount,
       pageCountLabel: validCount ? `${validCount} pages` : undefined,
     };
   });
+
+  const rawGenres: string[] = manga.genres?.value || [];
+  const cleanGenres = rawGenres.filter(
+    (g: string) => !HIDDEN_SOURCE_NAMES.has(g.trim().toLowerCase())
+  );
 
   return {
     type: "SUCCESS",
@@ -91,17 +108,17 @@ export function toMangaDetailViewModel(
     ratingLabel: formatRatingLabel(manga.rating),
     statusLabel: manga.status?.value || "ONGOING",
     authorsLabel: (manga.authors?.value || []).join(", ") || "Unknown Author",
-    genres: manga.genres?.value || [],
+    genres: cleanGenres.length > 0 ? cleanGenres : ["Manga"],
     alternativeTitles: manga.alternativeTitles?.value || [],
     publicationYear: "2024",
     totalChapters: chapters.length,
     lastUpdatedLabel: formatRelativeDate(manga.updatedAt),
-    providerMatrix,
+    providerMatrix: [],
     chapters: chapterItems,
     recommendations: recs,
     showRating: true,
     showAuthors: (manga.authors?.value || []).length > 0,
-    showProviderMatrix: providerMatrix.length > 0,
+    showProviderMatrix: false,
     showRecommendations: recs.length > 0,
     showChapters: chapterItems.length > 0,
   };

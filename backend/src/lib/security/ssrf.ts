@@ -29,9 +29,45 @@ export const METADATA_IMAGE_CDN_ALLOWLIST = [
   "myanimelist.cdn-dena.com",
 ];
 
+export const COMMON_MANGA_CDN_SUFFIXES = [
+  "anilist.co",
+  "kitsu.app",
+  "kitsu.io",
+  "myanimelist.net",
+  "mangadex.org",
+  "mangadex.network",
+  "weebcentral.com",
+  "compsci88.com",
+  "temp-data.link",
+  "wixmp.com",
+  "googleusercontent.com",
+  "cloudinary.com",
+  "wp.com",
+  "mangakatana.com",
+  "imagehost.at",
+  "mangascan.ws",
+  "comick.io",
+  "comick.app",
+  "comick.pictures",
+  "asurascan.com",
+  "asuracomics.com",
+  "flamecomics.com",
+  "flamecomics.me",
+  "mgeko.cc",
+  "mangageko.com",
+  "bato.to",
+  "battwo.com",
+  "mangaread.org",
+  "demonicscans.org",
+  "kaliscan.io",
+  "webtoons.com",
+  "naver.net",
+  "novelcool.com",
+];
+
 export const METADATA_NETWORK_POLICY: ProviderNetworkPolicy = {
   allowedHosts: [...METADATA_IMAGE_CDN_ALLOWLIST],
-  allowedHostSuffixes: [".anilist.co", ".kitsu.app", ".kitsu.io", ".myanimelist.net"],
+  allowedHostSuffixes: COMMON_MANGA_CDN_SUFFIXES,
 };
 
 export interface SSRFValidationResult {
@@ -78,16 +114,19 @@ export function validateUrlAgainstNetworkPolicy(
     return { valid: true, sanitizedUrl: parsed.toString() };
   }
 
-  // Check against provider policy allowed host suffixes (e.g. .mangadex.org)
-  if (policy.allowedHostSuffixes && policy.allowedHostSuffixes.length > 0) {
-    const isSuffixMatch = policy.allowedHostSuffixes.some((suffix) => {
-      const cleanSuffix = suffix.startsWith(".") ? suffix.toLowerCase() : `.${suffix.toLowerCase()}`;
-      return hostname.endsWith(cleanSuffix);
-    });
+  // Check against provider policy allowed host suffixes
+  const combinedSuffixes = [
+    ...(policy.allowedHostSuffixes || []),
+    ...COMMON_MANGA_CDN_SUFFIXES,
+  ];
 
-    if (isSuffixMatch) {
-      return { valid: true, sanitizedUrl: parsed.toString() };
-    }
+  const isSuffixMatch = combinedSuffixes.some((suffix) => {
+    const cleanSuffix = suffix.startsWith(".") ? suffix.toLowerCase() : `.${suffix.toLowerCase()}`;
+    return hostname === suffix.toLowerCase() || hostname.endsWith(cleanSuffix);
+  });
+
+  if (isSuffixMatch) {
+    return { valid: true, sanitizedUrl: parsed.toString() };
   }
 
   return {
