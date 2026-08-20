@@ -62,7 +62,7 @@ const defaultSettings: ReaderSettings = {
   autoAdvance: false,
   showPageNumbers: true,
   preserveZoom: false,
-  fit: "width",
+  fit: "contain",
 };
  
 function ShortcutRow({ keys, desc }: { keys: string[]; desc: string }) {
@@ -1037,11 +1037,6 @@ function ReaderPage({
             pageNumber: page.number,
             chapterId: page.chapterId,
             imageHost,
-            attempt: attempts,
-            latencyMs,
-            readerMode: settings.mode,
-            cacheHit: false,
-            isPermanent: !!err?.isPermanent,
             error: err?.message || "Fetch failed",
             timestamp: new Date().toISOString(),
           })
@@ -1072,12 +1067,10 @@ function ReaderPage({
     setRetryCount((prev) => prev + 1);
   };
 
-  const aspectRatio = page.width && page.height ? page.width / page.height : 0.7;
-
   const fitStyles = {
     width: { width: "100%", height: "auto" },
     height: { width: "auto", height: "100%" },
-    contain: { width: "100%", height: "100%", objectFit: "contain" as const },
+    contain: { width: "auto", height: "auto", maxHeight: "92vh", maxWidth: "100%", objectFit: "contain" as const },
     cover: { width: "100%", height: "100%", objectFit: "cover" as const },
   };
 
@@ -1085,34 +1078,33 @@ function ReaderPage({
     <div
       data-page-number={index + 1}
       className={cn(
-        "relative flex-shrink-0 snap-center select-none",
-        isHorizontal && "h-[90vh] max-h-[90vh]"
+        "relative flex-shrink-0 snap-center select-none flex items-center justify-center w-full my-1 sm:my-2",
+        isHorizontal ? "h-[90vh] max-h-[90vh]" : "min-h-[85vh] max-h-[95vh]"
       )}
       role="listitem"
       aria-label={`Page ${page.number}`}
     >
       <div
-        className="relative overflow-hidden rounded-lg shadow-xl min-h-[300px]"
+        className="relative overflow-hidden rounded-lg shadow-xl flex items-center justify-center max-h-[92vh] max-w-full"
         style={{
           transform: `scale(${zoom / 100})`,
           transformOrigin: isHorizontal ? "center" : "top center",
           ...fitStyles[settings.fit],
-          aspectRatio: !isHorizontal ? `${aspectRatio}` : undefined,
         }}
       >
         {imageState === "loading" && (
-          <div className="absolute inset-0 bg-muted/50 flex flex-col items-center justify-center gap-2 min-h-[400px]">
+          <div className="flex flex-col items-center justify-center gap-2 h-[80vh] min-w-[260px] bg-muted/30 rounded-lg">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <span className="text-[10px] text-muted-foreground font-semibold">Loading page {page.number}...</span>
           </div>
         )}
 
         {imageState === "error" && (
-          <div className="absolute inset-0 bg-destructive/10 border border-destructive/20 rounded-lg flex flex-col items-center justify-center p-6 gap-3 text-center min-h-[300px]">
+          <div className="h-[60vh] min-w-[260px] bg-destructive/10 border border-destructive/20 rounded-lg flex flex-col items-center justify-center p-6 gap-3 text-center">
             <Info className="h-8 w-8 text-destructive animate-pulse" />
             <div className="space-y-1">
               <p className="text-sm font-bold text-foreground">Failed to Load Page {page.number}</p>
-              <p className="text-xs text-muted-foreground">The image upstream request timed out or failed to load.</p>
+              <p className="text-xs text-muted-foreground">The image request failed or timed out.</p>
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="default" onClick={handleRetry} className="h-8 font-semibold">
@@ -1127,7 +1119,12 @@ function ReaderPage({
             src={srcUrl}
             alt={`Page ${page.number}`}
             loading="lazy"
-            className="w-full h-full object-contain"
+            className={cn(
+              "max-h-[92vh] w-auto max-w-full object-contain rounded-lg transition-transform",
+              settings.fit === "width" && "w-full h-auto max-h-none",
+              settings.fit === "height" && "h-[92vh] w-auto",
+              settings.fit === "contain" && "max-h-[92vh] w-auto max-w-full object-contain"
+            )}
           />
         )}
       </div>
@@ -1144,4 +1141,4 @@ function ReaderPage({
       )}
     </div>
   );
-}
+}

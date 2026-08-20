@@ -1,4 +1,4 @@
-import { backendClient } from "@/lib/backend-client";
+import { backendClient, NormalizedSearchResult } from "@/lib/backend-client";
 import { SearchResultViewModel, SearchSuggestionItem } from "../search.viewmodel";
 import { MangaCardViewModel } from "../home.viewmodel";
 import { formatRatingLabel } from "../shared/formatters";
@@ -6,21 +6,21 @@ import { formatRatingLabel } from "../shared/formatters";
 export async function loadSearchPage(query: string = ""): Promise<SearchResultViewModel> {
   try {
     const trimmed = query.trim();
-    if (!trimmed) {
-      return {
-        type: "SUCCESS",
-        query: "",
-        suggestions: [],
-        results: [],
-        totalResults: 0,
-        showSuggestions: false,
-        showResults: false,
-        showZeroResults: false,
-      };
-    }
+    let results: NormalizedSearchResult[] = [];
 
-    const searchResponse = await backendClient.search(trimmed, "all", 24);
-    const results = searchResponse.results || [];
+    if (!trimmed) {
+      // Load trending / popular catalog when no search query is specified
+      const frontpage = await backendClient.getFrontpage("weebcentral", "popular", 30);
+      if (frontpage?.section?.items && frontpage.section.items.length > 0) {
+        results = frontpage.section.items;
+      } else {
+        const searchRes = await backendClient.search("a", "all", 24);
+        results = searchRes.results || [];
+      }
+    } else {
+      const searchResponse = await backendClient.search(trimmed, "all", 24);
+      results = searchResponse.results || [];
+    }
 
     const cards: MangaCardViewModel[] = results.map((item) => {
       const rawRating = item.rating != null ? parseFloat(String(item.rating)) : null;

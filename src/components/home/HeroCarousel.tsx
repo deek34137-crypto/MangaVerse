@@ -407,7 +407,7 @@ export function HeroCarousel({ featured, className }: HeroCarouselProps) {
             </div>
 
             {/* Quick Hero Search Input (Positioned Below Controls) */}
-            <div className="max-w-xl">
+            <div className="max-w-xl mt-8 sm:mt-10 pt-2">
               <Link href="/search" className="block">
                 <div className="flex items-center justify-between w-full h-11 px-4 rounded-xl bg-card/80 border border-border/80 hover:border-primary/50 text-muted-foreground text-xs transition-all shadow-sm backdrop-blur-md cursor-pointer group">
                   <div className="flex items-center gap-2.5">

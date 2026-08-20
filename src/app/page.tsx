@@ -51,10 +51,15 @@ export default async function HomePage() {
     ratingCount: 1250,
     followCount: 5400,
     viewCount: 24500,
-    chapterCount: 120,
-    volumeCount: 12,
+    chapterCount: 0,
+    volumeCount: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    latestChapter: {
+      id: "latest",
+      number: card.latestChapterLabel ? card.latestChapterLabel.replace(/^Chapter\s*/i, "") : "1",
+      title: card.latestChapterLabel || "Chapter 1",
+    } as any,
   }));
 
   const trendingMangaList: Manga[] = (viewModel.trendingRows || []).map((card) => ({
@@ -74,10 +79,15 @@ export default async function HomePage() {
     ratingCount: 800,
     followCount: 3200,
     viewCount: 18000,
-    chapterCount: 95,
-    volumeCount: 8,
+    chapterCount: 0,
+    volumeCount: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    latestChapter: {
+      id: "latest",
+      number: card.latestChapterLabel ? card.latestChapterLabel.replace(/^Chapter\s*/i, "") : "1",
+      title: card.latestChapterLabel || "Chapter 1",
+    } as any,
   }));
 
   const continueReadingItems = (viewModel.continueReading || []).map((cr) => ({
