@@ -5,6 +5,8 @@ import { ChapterReaderWrapper } from "@/components/reader/ChapterReaderWrapper";
 import { getMangaDetail, getChapterDetail, getChaptersDetail } from "@/services/manga";
 import { isUuid } from "@/lib/url";
 
+export const dynamic = "force-dynamic";
+
 interface ChapterPageProps {
   params: Promise<{ id: string; chapterId: string }>;
 }
@@ -45,7 +47,6 @@ export default async function ChapterPage({ params }: ChapterPageProps) {
   const { id, chapterId } = await params;
   const t0 = performance.now();
 
-  console.log(`[ChapterPage] Server fetching details for manga ${id}, chapter ${chapterId}...`);
   const manga = await getMangaDetail(id);
   
   if (!manga) {
@@ -59,14 +60,12 @@ export default async function ChapterPage({ params }: ChapterPageProps) {
     notFound();
   }
 
-  // Canonical 301 Redirect: If URL accessed via raw UUID when canonical slug exists, redirect to canonical slug URL
+  // Canonical 301 Redirect: If URL accessed via raw UUID when canonical slug exists, redirect to canonical slug URL preserving chapter identifier
   if (manga.slug && isUuid(id)) {
-    const targetChapterNum = chapter.number != null ? chapter.number : chapterId;
-    redirect(`/manga/${manga.slug}/chapter/${targetChapterNum}`);
+    redirect(`/manga/${manga.slug}/chapter/${chapter.id || chapterId}`);
   }
 
   const chapters = await getChaptersDetail(id);
-  console.log(`[ChapterPage] Loaded all data successfully (took ${(performance.now() - t0).toFixed(1)}ms total)`);
 
   return (
     <div className="min-h-screen">

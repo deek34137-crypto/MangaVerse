@@ -1,16 +1,7 @@
 import { backendClient } from "@/lib/backend-client";
 import { ReaderResultViewModel, toReaderViewModel } from "../reader.viewmodel";
 import { ReaderTelemetry } from "../../aggregation/types";
-
-function parseProviderAndId(rawStr: string): { provider: string; id: string } {
-  if (rawStr.includes("_")) {
-    const parts = rawStr.split("_");
-    const provider = parts[0];
-    const id = parts.slice(1).join("_");
-    return { provider, id };
-  }
-  return { provider: "weebcentral", id: rawStr };
-}
+import { parseProviderAndId } from "@/services/manga";
 
 export async function loadReaderPage(
   canonicalId: string,
@@ -20,11 +11,34 @@ export async function loadReaderPage(
   const { provider: mangaProvider, id: parsedMangaId } = parseProviderAndId(canonicalId);
   const { provider: chProvider, id: parsedChapterId } = parseProviderAndId(chapterId);
 
-  const provider = chProvider || mangaProvider || "weebcentral";
-  const targetChapterId = parsedChapterId || chapterId;
+  let provider = chProvider || mangaProvider || "weebcentral";
+  let targetChapterId = parsedChapterId || chapterId;
+  let chapterUrl: string | undefined = undefined;
 
   try {
-    const pages = await backendClient.getPages(provider, targetChapterId);
+    // If chapterId is a simple number, resolve real chapterId from provider's chapter list
+    if (/^\d+(\.\d+)?$/.test(targetChapterId)) {
+      try {
+        const rawChapters = await backendClient.getChapters(provider, parsedMangaId);
+        if (rawChapters && rawChapters.length > 0) {
+          const match = rawChapters.find(
+            (c) =>
+              c.number === targetChapterId ||
+              String(c.numberValue) === targetChapterId ||
+              c.id === targetChapterId
+          );
+          if (match) {
+            targetChapterId = match.id;
+            chapterUrl = match.url;
+            provider = match.provider || provider;
+          }
+        }
+      } catch {
+        // ignore fallback
+      }
+    }
+
+    const pages = await backendClient.getPages(provider, targetChapterId, chapterUrl);
 
     if (!pages || pages.length === 0) {
       return {

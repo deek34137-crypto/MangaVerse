@@ -5,6 +5,8 @@ import { MangaDetail } from "@/components/manga/manga-detail";
 import { isUuid } from "@/lib/url";
 import type { Manga, Chapter } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function MangaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const mangaIdOrSlug = resolvedParams.id;

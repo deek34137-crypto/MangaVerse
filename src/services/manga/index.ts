@@ -1,13 +1,49 @@
 import { backendClient } from "@/lib/backend-client";
 import { cacheGet, cacheSet } from "@/services/cache";
 
-function parseProviderAndId(rawStr: string): { provider: string; id: string } {
+const KNOWN_PROVIDERS = [
+  "weebcentral",
+  "mangadex",
+  "mangakatana",
+  "comick",
+  "asurascan",
+  "flamecomics",
+  "mgeko",
+  "mangaread",
+  "bato",
+  "demonicscans",
+  "kaliscan",
+  "webtoon",
+  "novelcool",
+];
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function parseProviderAndId(rawStr: string): { provider: string; id: string } {
+  if (!rawStr) return { provider: "weebcentral", id: "" };
+
+  // 1. Check for UUID (MangaDex standard ID format)
+  if (UUID_REGEX.test(rawStr)) {
+    return { provider: "mangadex", id: rawStr };
+  }
+
+  // 2. Check for explicit provider prefix: "provider_id"
   if (rawStr.includes("_")) {
     const parts = rawStr.split("_");
-    const provider = parts[0];
-    const id = parts.slice(1).join("_");
-    return { provider, id };
+    const prefix = parts[0].toLowerCase();
+    if (KNOWN_PROVIDERS.includes(prefix)) {
+      const id = parts.slice(1).join("_");
+      return { provider: prefix, id };
+    }
   }
+
+  // 3. Check for hyphen prefix: "provider-id"
+  for (const prov of KNOWN_PROVIDERS) {
+    if (rawStr.toLowerCase().startsWith(`${prov}-`)) {
+      return { provider: prov, id: rawStr.slice(prov.length + 1) };
+    }
+  }
+
   return { provider: "weebcentral", id: rawStr };
 }
 
@@ -25,7 +61,7 @@ export async function getMangaDetail(idOrSlug: string): Promise<any | null> {
   try {
     let detail = await backendClient.getMangaDetail(provider, id);
     if (!detail) {
-      // If not found directly, search by query to resolve
+      // If not found directly, search by query across all providers to resolve
       const searchRes = await backendClient.search(idOrSlug, "all", 1);
       if (searchRes.results && searchRes.results.length > 0) {
         const match = searchRes.results[0];
@@ -103,7 +139,16 @@ export async function getChaptersDetail(mangaIdOrSlug: string): Promise<any[]> {
   const { provider, id } = parseProviderAndId(mangaIdOrSlug);
 
   try {
-    const rawChapters = await backendClient.getChapters(provider, id);
+    let rawChapters = await backendClient.getChapters(provider, id);
+    if (!rawChapters || rawChapters.length === 0) {
+      // Fallback search to resolve if needed
+      const searchRes = await backendClient.search(id, "all", 1);
+      if (searchRes.results && searchRes.results.length > 0) {
+        const match = searchRes.results[0];
+        rawChapters = await backendClient.getChapters(match.provider, match.id);
+      }
+    }
+
     if (!rawChapters || rawChapters.length === 0) return [];
 
     const mapped = rawChapters.map((ch, idx) => ({
@@ -121,6 +166,7 @@ export async function getChaptersDetail(mangaIdOrSlug: string): Promise<any[]> {
       scanlatorGroups: [],
       provider: ch.provider || provider,
       providerChapterId: ch.id,
+      url: ch.url,
       pages: [],
     }));
 
@@ -143,37 +189,75 @@ export async function getChapterDetail(
   const cached = await cacheGet<any>(cacheKey);
   if (cached && cached.pages && cached.pages.length > 0) return cached;
 
-  const { provider } = parseProviderAndId(mangaIdOrSlug);
-  const { id: chapterId } = parseProviderAndId(chapterIdOrNumber);
+  const { provider: mangaProvider } = parseProviderAndId(mangaIdOrSlug);
 
   try {
-    const rawPages = await backendClient.getPages(provider, chapterId);
+    let targetProvider = mangaProvider;
+    let targetChapterId = chapterIdOrNumber;
+    let targetChapterNumber = parseFloat(chapterIdOrNumber) || 1;
+    let targetTitle = `Chapter ${chapterIdOrNumber}`;
+    let chapterUrl: string | undefined = undefined;
+
+    // Check if chapterIdOrNumber contains provider prefix
+    if (chapterIdOrNumber.includes("_")) {
+      const parsedCh = parseProviderAndId(chapterIdOrNumber);
+      targetProvider = parsedCh.provider;
+      targetChapterId = parsedCh.id;
+    }
+
+    // Resolve real chapter ID and URL from chapters list
+    const allChapters = await getChaptersDetail(mangaIdOrSlug);
+    if (allChapters && allChapters.length > 0) {
+      const match =
+        allChapters.find(
+          (c) =>
+            c.id === chapterIdOrNumber ||
+            c.providerChapterId === chapterIdOrNumber ||
+            c.id === targetChapterId ||
+            c.providerChapterId === targetChapterId
+        ) ||
+        allChapters.find(
+          (c) =>
+            String(c.number) === chapterIdOrNumber ||
+            parseFloat(String(c.number)) === parseFloat(chapterIdOrNumber)
+        );
+
+      if (match) {
+        targetProvider = match.provider || targetProvider;
+        targetChapterId = match.providerChapterId || match.id;
+        targetChapterNumber = match.number != null ? parseFloat(String(match.number)) : targetChapterNumber;
+        targetTitle = match.title || targetTitle;
+        chapterUrl = match.url;
+      }
+    }
+
+    const rawPages = await backendClient.getPages(targetProvider, targetChapterId, chapterUrl);
 
     const pages = rawPages.map((p, idx) => ({
-      id: `${chapterId}-page-${p.index || idx + 1}`,
-      chapterId,
+      id: `${targetChapterId}-page-${p.index || idx + 1}`,
+      chapterId: targetChapterId,
       number: p.index || idx + 1,
-      url: backendClient.getImageProxyUrl(p.provider || provider, p.url),
+      url: backendClient.getImageProxyUrl(p.provider || targetProvider, p.url),
       width: p.width || 0,
       height: p.height || 0,
       size: 0,
     }));
 
     const result = {
-      id: chapterId,
+      id: targetChapterId,
       mangaId: mangaIdOrSlug,
-      number: parseFloat(chapterIdOrNumber) || 1,
+      number: targetChapterNumber,
       volume: null,
       type: "chapter",
-      title: `Chapter ${chapterIdOrNumber}`,
+      title: targetTitle,
       language: "en",
       pageCount: pages.length,
       publishedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       scanlatorGroups: [],
-      provider,
-      providerChapterId: chapterId,
+      provider: targetProvider,
+      providerChapterId: targetChapterId,
       pages,
     };
 

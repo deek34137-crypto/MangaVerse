@@ -1,16 +1,7 @@
 import { backendClient } from "@/lib/backend-client";
 import { MangaDetailResultViewModel, toMangaDetailViewModel } from "../manga.viewmodel";
 import { CanonicalManga, CanonicalChapter, AGGREGATION_VERSION } from "../../aggregation/types";
-
-function parseProviderAndId(rawStr: string): { provider: string; id: string } {
-  if (rawStr.includes("_")) {
-    const parts = rawStr.split("_");
-    const provider = parts[0];
-    const id = parts.slice(1).join("_");
-    return { provider, id };
-  }
-  return { provider: "weebcentral", id: rawStr };
-}
+import { parseProviderAndId } from "@/services/manga";
 
 function normalizeStatus(status?: string): "ONGOING" | "COMPLETED" | "HIATUS" | "CANCELLED" | "UNKNOWN" {
   const upper = (status || "").toUpperCase();
@@ -24,7 +15,16 @@ function normalizeStatus(status?: string): "ONGOING" | "COMPLETED" | "HIATUS" | 
 export async function loadMangaDetailPage(canonicalId: string): Promise<MangaDetailResultViewModel> {
   try {
     const { provider, id } = parseProviderAndId(canonicalId);
-    const mangaDetail = await backendClient.getMangaDetail(provider, id);
+    let mangaDetail = await backendClient.getMangaDetail(provider, id);
+
+    if (!mangaDetail) {
+      // Search across all providers to resolve
+      const searchRes = await backendClient.search(canonicalId, "all", 1);
+      if (searchRes.results && searchRes.results.length > 0) {
+        const match = searchRes.results[0];
+        mangaDetail = await backendClient.getMangaDetail(match.provider, match.id);
+      }
+    }
 
     if (!mangaDetail) {
       return {
@@ -34,10 +34,12 @@ export async function loadMangaDetailPage(canonicalId: string): Promise<MangaDet
       };
     }
 
-    const rawChapters = await backendClient.getChapters(provider, id);
+    const actualProvider = mangaDetail.provider || provider;
+    const actualId = mangaDetail.id || id;
+    const rawChapters = await backendClient.getChapters(actualProvider, actualId);
 
     const now = new Date().toISOString();
-    const traceId = `trace_${provider}_${id}`;
+    const traceId = `trace_${actualProvider}_${actualId}`;
 
     // Select the highest quality available cover
     const bestCover =
@@ -47,15 +49,15 @@ export async function loadMangaDetailPage(canonicalId: string): Promise<MangaDet
       mangaDetail.nativeCoverImage ||
       "";
 
-    const coverProvider = mangaDetail.metadataSource || provider;
+    const coverProvider = mangaDetail.metadataSource || actualProvider;
 
     const canonicalManga: CanonicalManga = {
       canonicalId,
       aggregationVersion: AGGREGATION_VERSION,
       qualityTier: "TIER_A_PRODUCTION",
-      title: { value: mangaDetail.title, confidence: 1.0, provider, mergedAt: now, traceId },
-      alternativeTitles: { value: mangaDetail.altTitles || [], confidence: 1.0, provider, mergedAt: now, traceId },
-      description: { value: mangaDetail.description || "", confidence: 1.0, provider, mergedAt: now, traceId },
+      title: { value: mangaDetail.title, confidence: 1.0, provider: actualProvider, mergedAt: now, traceId },
+      alternativeTitles: { value: mangaDetail.altTitles || [], confidence: 1.0, provider: actualProvider, mergedAt: now, traceId },
+      description: { value: mangaDetail.description || "", confidence: 1.0, provider: actualProvider, mergedAt: now, traceId },
       coverImage: {
         value: backendClient.getImageProxyUrl(coverProvider, bestCover),
         confidence: 1.0,
@@ -63,10 +65,10 @@ export async function loadMangaDetailPage(canonicalId: string): Promise<MangaDet
         mergedAt: now,
         traceId,
       },
-      status: { value: normalizeStatus(mangaDetail.status), confidence: 1.0, provider, mergedAt: now, traceId },
-      genres: { value: mangaDetail.genres || [], confidence: 1.0, provider, mergedAt: now, traceId },
-      authors: { value: mangaDetail.authors || [], confidence: 1.0, provider, mergedAt: now, traceId },
-      providerMappings: [{ providerId: provider, providerMangaId: id, trustScore: 0.95 }],
+      status: { value: normalizeStatus(mangaDetail.status), confidence: 1.0, provider: actualProvider, mergedAt: now, traceId },
+      genres: { value: mangaDetail.genres || [], confidence: 1.0, provider: actualProvider, mergedAt: now, traceId },
+      authors: { value: mangaDetail.authors || [], confidence: 1.0, provider: actualProvider, mergedAt: now, traceId },
+      providerMappings: [{ providerId: actualProvider, providerMangaId: actualId, trustScore: 0.95 }],
       rating: mangaDetail.rating ?? 8.5,
       formattedRating: mangaDetail.rating ? mangaDetail.rating.toFixed(1) : "8.5",
       quality: {
@@ -85,14 +87,14 @@ export async function loadMangaDetailPage(canonicalId: string): Promise<MangaDet
 
     const canonicalChapters: CanonicalChapter[] = rawChapters.map((ch, idx) => ({
       id: ch.id,
-      canonicalChapterId: `${provider}_${ch.id}`,
+      canonicalChapterId: `${actualProvider}_${ch.id}`,
       aggregationVersion: "1.0",
       canonicalMangaId: canonicalId,
       chapterNumber: ch.numberValue ?? (idx + 1),
       key: { chapter: ch.numberValue ?? (idx + 1), key: `c${(ch.numberValue ?? idx + 1).toString().padStart(4, "0")}` },
       title: ch.title || `Chapter ${ch.number}`,
-      sources: [{ providerId: provider, providerChapterId: ch.id, sourceScore: 0.95, url: ch.url }],
-      providerIds: [provider],
+      sources: [{ providerId: actualProvider, providerChapterId: ch.id, sourceScore: 0.95, url: ch.url }],
+      providerIds: [actualProvider],
       releasedAt: ch.publishedAt || now,
       updatedAt: ch.publishedAt || now,
       lastValidated: now,

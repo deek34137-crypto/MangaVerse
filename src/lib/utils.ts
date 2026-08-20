@@ -272,37 +272,35 @@ export function pickRandom<T>(array: T[], count: number = 1): T[] {
   return shuffled.slice(0, count);
 }
 
-export function getProxiedImageUrl(url: string | null | undefined): string {
-  if (!url) return "";
+export function getProxiedImageUrl(url: string | null | undefined, provider: string = "weebcentral"): string {
+  if (!url) return "/placeholders/cover.jpg";
 
-  // Unnest double-proxied URLs (e.g. if a cover was stored already proxied)
-  let currentUrl = url;
-  while (currentUrl.includes("/api/image?url=")) {
-    const match = currentUrl.match(/[\?&]url=([^&]+)/);
-    if (match?.[1]) {
-      currentUrl = decodeURIComponent(match[1]);
-    } else {
-      break;
-    }
+  // If already proxied via Cloudflare Worker, return directly
+  if (url.includes("/api/proxy/image")) {
+    return url;
   }
 
-  // Pass through relative paths, data URIs, and blob URLs — they're already local.
+  // Pass through relative paths, data URIs, and blob URLs
   if (
-    currentUrl.startsWith("/") ||
-    currentUrl.startsWith("data:") ||
-    currentUrl.startsWith("blob:")
+    url.startsWith("/") ||
+    url.startsWith("data:") ||
+    url.startsWith("blob:")
   ) {
-    return currentUrl;
+    return url;
   }
 
-  // All external http(s) URLs are proxied.
-  // This means every provider CDN works automatically without domain whitelisting.
-  if (currentUrl.startsWith("http://") || currentUrl.startsWith("https://")) {
-    return `/api/image?url=${encodeURIComponent(currentUrl)}`;
+  // Route external URLs to Cloudflare Worker image proxy
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    const backendUrl =
+      (typeof window === "undefined"
+        ? process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL
+        : process.env.NEXT_PUBLIC_BACKEND_API_URL) || "https://mangahub-backend.deek34137.workers.dev";
+
+    const base = backendUrl.replace(/\/$/, "");
+    return `${base}/api/proxy/image?provider=${encodeURIComponent(provider)}&url=${encodeURIComponent(url)}`;
   }
 
-  // Fallback: return as-is (handles edge cases like protocol-relative URLs)
-  return currentUrl;
+  return url;
 }
 
 /**
